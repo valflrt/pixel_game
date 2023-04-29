@@ -1,8 +1,8 @@
 [package]
 name = "pixel_game"
 version = "0.1.0"
+authors = ["valflrt"]
 edition = "2021"
-
 
 [dependencies]
 pixels = "0.12.1"
