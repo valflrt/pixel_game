@@ -58,6 +58,10 @@ impl<T> Mat<T> {
     pub fn iter_mut(&mut self) -> std::slice::IterMut<T> {
         self.vec.iter_mut()
     }
+
+    pub fn dims(&self) -> (usize, usize) {
+        self.dims
+    }
 }
 
 impl<T, D> Index<D> for Mat<T>
@@ -71,7 +75,7 @@ where
         D: Into<(usize, usize)>,
     {
         let index = index.into();
-        &self.vec[index.0 * self.dims.1 + index.1]
+        &self.vec[index.1 * self.dims.0 + index.0]
     }
 }
 
@@ -81,7 +85,7 @@ where
 {
     fn index_mut(&mut self, index: D) -> &mut Self::Output {
         let index = index.into();
-        &mut self.vec[index.0 * self.dims.1 + index.1]
+        &mut self.vec[index.1 * self.dims.0 + index.0]
     }
 }
 
