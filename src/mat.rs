@@ -3,6 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+/// Matrix (vector in 2 dimensions).
 #[derive(Debug, Clone)]
 pub struct Mat<T> {
     vec: Vec<T>,
@@ -10,6 +11,7 @@ pub struct Mat<T> {
 }
 
 impl<T> Mat<T> {
+    /// Create new Mat.
     pub fn new(default_value: T, dims: (usize, usize)) -> Self
     where
         T: Clone,
@@ -25,6 +27,8 @@ impl<T> Mat<T> {
         }
     }
 
+    /// Create Mat from a vector and dimensions, the vector
+    /// length must equal the product of the dimensions.
     pub fn from_vec(vec: Vec<T>, dims: (usize, usize)) -> Self {
         assert_eq!(
             vec.len(),
@@ -35,6 +39,7 @@ impl<T> Mat<T> {
         Mat { dims, vec }
     }
 
+    /// Fill the Mat with the given value.
     pub fn fill(&mut self, value: T)
     where
         T: Clone,
@@ -42,6 +47,8 @@ impl<T> Mat<T> {
         self.vec.fill(value);
     }
 
+    /// Fill the Mat with the value returned by the provided
+    /// closure.
     pub fn fill_with<F>(&mut self, mut f: F)
     where
         F: FnMut() -> T,
@@ -51,14 +58,33 @@ impl<T> Mat<T> {
         }
     }
 
+    /// Create an Iterator that goes through all the values
+    /// in the Mat.
     pub fn iter(&self) -> std::slice::Iter<T> {
         self.vec.iter()
     }
 
+    /// Create a mutable Iterator that goes through all the
+    /// values in the Mat.
     pub fn iter_mut(&mut self) -> std::slice::IterMut<T> {
         self.vec.iter_mut()
     }
 
+    /// Return a reference to the vector representation of
+    /// the Mat.
+    pub fn vec(&self) -> &Vec<T> {
+        &self.vec
+    }
+
+    /// Return the vector representation of the Mat.
+    pub fn to_vec(&self) -> Vec<T>
+    where
+        T: Clone,
+    {
+        self.vec.to_owned()
+    }
+
+    /// The dimensions of the matrix (x, y).
     pub fn dims(&self) -> (usize, usize) {
         self.dims
     }
