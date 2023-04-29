@@ -3,33 +3,35 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::tuple2::Tuple2;
-
 #[derive(Debug, Clone)]
 pub struct Mat<T> {
     vec: Vec<T>,
-    dims: Tuple2<usize>,
+    dims: (usize, usize),
 }
 
 impl<T> Mat<T> {
-    pub fn new<D>(default_value: T, dims: D) -> Self
+    pub fn new(default_value: T, dims: (usize, usize)) -> Self
     where
         T: Clone,
-        D: Into<Tuple2<usize>>,
     {
-        let dims = dims.into();
         Mat {
             dims,
-            vec: vec![default_value; dims.0 * dims.1],
+            vec: vec![
+                default_value;
+                dims.0
+                    .checked_mul(dims.1)
+                    .expect("matrix dimensions are too big so their product is out of bounds")
+            ],
         }
     }
 
-    pub fn from_vec<D>(vec: Vec<T>, dims: D) -> Self
-    where
-        D: Into<Tuple2<usize>>,
-    {
-        let dims = dims.into();
-        assert_eq!(vec.len(), dims.0 * dims.1);
+    pub fn from_vec(vec: Vec<T>, dims: (usize, usize)) -> Self {
+        assert_eq!(
+            vec.len(),
+            dims.0
+                .checked_mul(dims.1)
+                .expect("matrix dimensions are too big so their product is out of bounds")
+        );
         Mat { dims, vec }
     }
 
@@ -48,17 +50,25 @@ impl<T> Mat<T> {
             *el = f();
         }
     }
+
+    pub fn iter(&self) -> std::slice::Iter<T> {
+        self.vec.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<T> {
+        self.vec.iter_mut()
+    }
 }
 
 impl<T, D> Index<D> for Mat<T>
 where
-    D: Into<Tuple2<usize>>,
+    D: Into<(usize, usize)>,
 {
     type Output = T;
 
     fn index(&self, index: D) -> &Self::Output
     where
-        D: Into<Tuple2<usize>>,
+        D: Into<(usize, usize)>,
     {
         let index = index.into();
         &self.vec[index.0 * self.dims.1 + index.1]
@@ -67,7 +77,7 @@ where
 
 impl<T, D> IndexMut<D> for Mat<T>
 where
-    D: Into<Tuple2<usize>>,
+    D: Into<(usize, usize)>,
 {
     fn index_mut(&mut self, index: D) -> &mut Self::Output {
         let index = index.into();
