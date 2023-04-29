@@ -40,6 +40,13 @@ fn main() {
 
     let mut grid = Grid::new(WIDTH, HEIGHT);
 
+    let image = image::open("assets/sprites/walking_1.png")
+        .unwrap()
+        .to_rgba8();
+    let image_pixels: Vec<&[u8]> = image.as_raw().chunks(4).collect();
+
+    grid.load_image_at((10, 10), image_pixels, 24);
+
     let mut position: (usize, usize) = (0, 0);
     let mut prev_position: (usize, usize) = (0, 0);
 
@@ -132,6 +139,17 @@ impl Grid {
     pub fn draw(&self, pixels: &mut [u8]) {
         for (c, pix) in self.mat.iter().zip(pixels.chunks_exact_mut(4)) {
             pix.copy_from_slice(&c.to_bytes());
+        }
+    }
+
+    pub fn load_image_at(&mut self, pos: (usize, usize), pixels: Vec<&[u8]>, width: usize) {
+        for (dy, chunk) in pixels.chunks(width).enumerate() {
+            for (dx, pixel) in chunk.iter().enumerate() {
+                if pixel[3] == 255 {
+                    self.mat[(pos.0 + dx, pos.1 + dy)] =
+                        Color::new(pixel[0], pixel[1], pixel[2], pixel[3]);
+                }
+            }
         }
     }
 

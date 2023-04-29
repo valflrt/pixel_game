@@ -11,6 +11,15 @@ impl Color {
         Color { r, g, b, a }
     }
 
+    pub fn from_bytes(bytes: [u8; 4]) -> Self {
+        Color {
+            r: bytes[0],
+            g: bytes[1],
+            b: bytes[2],
+            a: bytes[3],
+        }
+    }
+
     pub fn to_bytes(&self) -> [u8; 4] {
         [self.r, self.g, self.b, self.a]
     }
