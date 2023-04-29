@@ -120,6 +120,15 @@ fn main() {
     });
 }
 
+pub fn make_frames(paths: &[&str], dims: (usize, usize)) {
+    let mut frames = Vec::new();
+    for path in paths {
+        let image = image::open(path).unwrap().to_rgba8();
+        let image_pixels: Vec<&[u8]> = image.as_raw().chunks(4).collect();
+        frames.push(Mat::from_vec(image_pixels, dims));
+    }
+}
+
 struct Grid {
     mat: Mat<Color>,
 }
@@ -155,6 +164,28 @@ impl Grid {
 
     pub fn dims(&self) -> (usize, usize) {
         self.mat.dims()
+    }
+}
+
+struct Object {
+    pos: (usize, usize),
+    dims: (usize, usize),
+    texture: Mat<Color>,
+    frames: Vec<Mat<Color>>,
+    frame_n: usize,
+}
+
+impl Object {
+    pub fn update(&mut self) {
+        if self.frame_n + 1 == self.frames.len() {
+            self.frame_n += 1
+        } else {
+            self.frame_n = 0
+        }
+    }
+
+    pub fn current_frame(&self) -> &Mat<Color> {
+        &self.frames[self.frame_n]
     }
 }
 
