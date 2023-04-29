@@ -1,6 +1,6 @@
 # Pixel Game
 
-Trying to build a simple game with pixels.
+Trying to build a simple pixelated game.
 
 ## License
 
