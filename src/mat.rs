@@ -84,6 +84,21 @@ impl<T> Mat<T> {
         self.vec.to_owned()
     }
 
+    pub fn transpose(&mut self)
+    where
+        T: Clone,
+    {
+        let mat = self.clone();
+        for x in 0..self.dims.0 {
+            for y in 0..self.dims.1 {
+                self[(y, x)] = mat[(x, y)].clone();
+            }
+        }
+        self.dims = (self.dims.1, self.dims.0)
+    }
+
+    pub fn flip(horizontally: bool, vertically: bool) {}
+
     /// The dimensions of the matrix (x, y).
     pub fn dims(&self) -> (usize, usize) {
         self.dims
