@@ -3,6 +3,7 @@
 use color::Color;
 use mat::Mat;
 use pixels::{Pixels, SurfaceTexture};
+use std::time;
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
@@ -62,10 +63,10 @@ fn main() {
         frame_n: 0,
     };
 
-    let mut n: u32 = 0;
-
     let mut position: (usize, usize) = (0, 0);
     let mut prev_position: (usize, usize) = (0, 0);
+
+    let mut timer = time::Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
@@ -73,10 +74,10 @@ fn main() {
             pixels.render().unwrap()
         }
 
-        n += 1;
-        if n == 10 {
-            n = 0;
+        if timer.elapsed().as_millis() >= 100 {
             character.next_frame();
+            character.pos = (character.pos.0 + 1, character.pos.1);
+            timer = time::Instant::now();
         }
         grid.load_object(&character);
 
