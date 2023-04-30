@@ -40,12 +40,29 @@ fn main() {
 
     let mut grid = Grid::new(WIDTH, HEIGHT);
 
-    let image = image::open("assets/sprites/walking_1.png")
-        .unwrap()
-        .to_rgba8();
-    let image_pixels: Vec<&[u8]> = image.as_raw().chunks(4).collect();
+    let mut character = Object {
+        pos: (0, 0),
+        dims: (24, 24),
+        texture: Mat::new(Color::black(), (24, 24)),
+        frames: Object::make_frames(
+            &[
+                "assets/sprites/walking_1.png",
+                "assets/sprites/walking_2.png",
+                "assets/sprites/walking_3.png",
+                "assets/sprites/walking_4.png",
+                "assets/sprites/walking_5.png",
+                "assets/sprites/walking_6.png",
+                "assets/sprites/walking_7.png",
+                "assets/sprites/walking_8.png",
+                "assets/sprites/walking_9.png",
+                "assets/sprites/walking_10.png",
+            ],
+            (24, 24),
+        ),
+        frame_n: 0,
+    };
 
-    grid.load_image_at((10, 10), image_pixels, 24);
+    let mut n: u32 = 0;
 
     let mut position: (usize, usize) = (0, 0);
     let mut prev_position: (usize, usize) = (0, 0);
@@ -55,6 +72,13 @@ fn main() {
             grid.draw(pixels.frame_mut());
             pixels.render().unwrap()
         }
+
+        n += 1;
+        if n == 10 {
+            n = 0;
+            character.next_frame();
+        }
+        grid.load_object(&character);
 
         if input.update(&event) {
             if input.close_requested() {
@@ -120,15 +144,6 @@ fn main() {
     });
 }
 
-pub fn make_frames(paths: &[&str], dims: (usize, usize)) {
-    let mut frames = Vec::new();
-    for path in paths {
-        let image = image::open(path).unwrap().to_rgba8();
-        let image_pixels: Vec<&[u8]> = image.as_raw().chunks(4).collect();
-        frames.push(Mat::from_vec(image_pixels, dims));
-    }
-}
-
 struct Grid {
     mat: Mat<Color>,
 }
@@ -162,6 +177,15 @@ impl Grid {
         }
     }
 
+    pub fn load_object(&mut self, object: &Object) {
+        for x in 0..object.dims.0 {
+            for y in 0..object.dims.1 {
+                self.mat[(object.pos.0 + x, object.pos.1 + y)] =
+                    object.current_frame()[(x, y)].to_owned()
+            }
+        }
+    }
+
     pub fn dims(&self) -> (usize, usize) {
         self.mat.dims()
     }
@@ -176,8 +200,8 @@ struct Object {
 }
 
 impl Object {
-    pub fn update(&mut self) {
-        if self.frame_n + 1 == self.frames.len() {
+    pub fn next_frame(&mut self) {
+        if self.frame_n + 1 != self.frames.len() {
             self.frame_n += 1
         } else {
             self.frame_n = 0
@@ -186,6 +210,25 @@ impl Object {
 
     pub fn current_frame(&self) -> &Mat<Color> {
         &self.frames[self.frame_n]
+    }
+
+    pub fn make_frames(paths: &[&str], dims: (usize, usize)) -> Vec<Mat<Color>> {
+        let mut frames = Vec::new();
+        for path in paths {
+            let image = image::open(path).unwrap().to_rgba8();
+            let image_pixels: Vec<Color> = image
+                .as_raw()
+                .chunks(4)
+                .map(|v| Color {
+                    r: v[0],
+                    g: v[1],
+                    b: v[2],
+                    a: v[3],
+                })
+                .collect();
+            frames.push(Mat::from_vec(image_pixels, dims));
+        }
+        frames
     }
 }
 

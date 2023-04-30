@@ -20,6 +20,15 @@ impl Color {
         }
     }
 
+    pub fn black() -> Self {
+        Color {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 0,
+        }
+    }
+
     pub fn to_bytes(&self) -> [u8; 4] {
         [self.r, self.g, self.b, self.a]
     }
