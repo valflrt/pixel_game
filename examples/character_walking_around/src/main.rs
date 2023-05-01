@@ -2,8 +2,8 @@
 
 use std::time;
 
-use color::Color;
-use game::{Animation, Grid, Move, Object};
+use pixel_game::color::Color;
+use pixel_game::game::{Animation, Grid, Move, Object};
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::LogicalSize,
@@ -13,12 +13,8 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-mod color;
-mod game;
-mod mat;
-
 const WIDTH: usize = 64;
-const HEIGHT: usize = 24;
+const HEIGHT: usize = 48;
 
 const BG_COLOR: Color = Color {
     r: 30,
@@ -33,7 +29,7 @@ fn main() {
 
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        let scaled_size = LogicalSize::new(WIDTH as f64 * 5.0, HEIGHT as f64 * 5.0);
+        let scaled_size = LogicalSize::new(WIDTH as f64 * 10.0, HEIGHT as f64 * 10.0);
         WindowBuilder::new()
             .with_title("game")
             .with_inner_size(scaled_size)
@@ -66,13 +62,14 @@ fn main() {
                     "assets/sprites/walking_9.png",
                     "assets/sprites/walking_10.png",
                 ],
+                &["assets/sprites/walking_6.png"],
             ],
             (24, 24),
         ),
         (24, 24),
     );
 
-    character.pos.1 = 3;
+    character.pos.1 = 27;
     character.animation.set_state(0);
 
     let mut timer = time::Instant::now();
@@ -101,6 +98,11 @@ fn main() {
                 character.direction.0 = Move::None;
             };
 
+            if input.key_pressed(VirtualKeyCode::Up) {
+                character.animation.set_state(2);
+                character.direction.1 = Move::Backward;
+            }
+
             window.request_redraw();
         }
 
@@ -117,11 +119,12 @@ fn main() {
                     if character.pos.0 != 0 {
                         character.pos.0 - 1
                     } else {
-                        WIDTH
+                        WIDTH - 1
                     }
                 }
                 Move::None => character.pos.0,
             };
+
             character.next_frame();
             character.draw(&mut grid);
             timer = time::Instant::now();

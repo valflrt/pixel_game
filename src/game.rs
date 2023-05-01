@@ -35,14 +35,18 @@ pub struct Object {
     pub direction: (Move, Move),
     pub animation: Animation,
     last_pixels: Vec<(usize, usize)>,
+    // forces: Vec<(usize, usize)>,
+    // hitbox: Hitbox,
 }
 
 impl Object {
-    pub fn new(animation: Animation, dims: (usize, usize)) -> Self {
+    pub fn new(animation: Animation, dims: (usize, usize) /*, hitbox: Hitbox*/) -> Self {
         Object {
             pos: (0, 0),
             dims,
             animation,
+            // hitbox,
+            // forces: Vec::new(),
             direction: (Move::None, Move::None),
             last_pixels: Vec::new(),
         }
@@ -139,4 +143,10 @@ impl Animation {
             self.state = state;
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Hitbox {
+    pos: (usize, usize),
+    dims: (usize, usize),
 }
