@@ -6,9 +6,7 @@ edition = "2021"
 
 [dependencies]
 image = { version = "0.24.6", default-features = false, features = ["png"] }
-pixels = "0.12.1"
-winit = "0.28.3"
-winit_input_helper = "0.14.1"
+
 
 [workspace]
 members = ["examples/*"]

@@ -3,7 +3,7 @@
 use std::time;
 
 use pixel_game::color::Color;
-use pixel_game::game::{Animation, Grid, Move, Object};
+use pixel_game::game::{AnimatedObject, Animation, Grid, Move};
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::LogicalSize,
@@ -46,7 +46,7 @@ fn main() {
 
     let mut grid = Grid::new(BG_COLOR, (WIDTH, HEIGHT));
 
-    let mut character = Object::new(
+    let mut character = AnimatedObject::new(
         Animation::from_files(
             &[
                 &["assets/sprites/standing.png"],

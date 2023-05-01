@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{color::Color, mat::Mat};
+use crate::{color::Color, mat::Mat, vec::Vec2};
 
 #[derive(PartialEq)]
 pub enum Move {
@@ -33,15 +33,86 @@ pub struct Object {
     pub pos: (usize, usize),
     pub dims: (usize, usize),
     pub direction: (Move, Move),
+}
+
+pub struct StaticObject {
+    pub object: Object,
+    image: Mat<Color>,
+    last_pixels: Vec<(usize, usize)>,
+}
+
+impl StaticObject {
+    pub fn from_file(path: &str, dims: (usize, usize)) -> Self {
+        let image = image::open(path).unwrap().to_rgba8();
+        let image_pixels: Vec<Color> = image
+            .as_raw()
+            .chunks(4)
+            .map(|v| Color {
+                r: v[0],
+                g: v[1],
+                b: v[2],
+                a: v[3],
+            })
+            .collect();
+        StaticObject {
+            object: Object {
+                pos: (0, 0),
+                dims,
+                direction: (Move::None, Move::None),
+            },
+            image: Mat::from_vec(image_pixels, dims),
+            last_pixels: Vec::new(),
+        }
+    }
+
+    pub fn from_color(color: Color, dims: (usize, usize)) -> Self {
+        StaticObject {
+            object: Object {
+                pos: (0, 0),
+                dims,
+                direction: (Move::None, Move::None),
+            },
+            image: Mat::new(color, dims),
+            last_pixels: Vec::new(),
+        }
+    }
+
+    pub fn draw(&mut self, grid: &mut Grid) {
+        for index in &self.last_pixels {
+            grid.mat[*index] = grid.default_color;
+        }
+        self.last_pixels.clear();
+        let object = &self.object;
+        for x in 0..object.dims.0 {
+            for y in 0..object.dims.1 {
+                let pixel = &self.image[(x, y)];
+                let index = (
+                    (object.pos.0 + x) % grid.mat.dims().0,
+                    (object.pos.1 + y) % grid.mat.dims().1,
+                );
+                if pixel.a == 255 {
+                    grid.mat[index] = *pixel;
+                    self.last_pixels.push(index);
+                }
+            }
+        }
+    }
+}
+
+pub struct AnimatedObject {
+    pub pos: (usize, usize),
+    pub dims: (usize, usize),
+    pub direction: (Move, Move),
     pub animation: Animation,
     last_pixels: Vec<(usize, usize)>,
     // forces: Vec<(usize, usize)>,
     // hitbox: Hitbox,
 }
 
-impl Object {
+impl AnimatedObject {
     pub fn new(animation: Animation, dims: (usize, usize) /*, hitbox: Hitbox*/) -> Self {
-        Object {
+        assert_eq!(dims, animation.dims);
+        AnimatedObject {
             pos: (0, 0),
             dims,
             animation,
@@ -92,9 +163,10 @@ impl Object {
 pub struct Animation {
     state: usize,
     frame: usize,
-    pub flip: (bool, bool),
     // texture: Mat<Color>,
     states: Vec<Vec<Mat<Color>>>,
+    pub flip: (bool, bool),
+    dims: (usize, usize),
 }
 
 impl Animation {
@@ -126,6 +198,7 @@ impl Animation {
             frame: 0,
             states: animations,
             flip: (false, false),
+            dims,
         }
     }
 
@@ -149,4 +222,62 @@ impl Animation {
 pub struct Hitbox {
     pos: (usize, usize),
     dims: (usize, usize),
+}
+
+pub struct Physics {
+    pos: Vec2<f32>,
+    v: Vec2<f32>,
+    a: Vec2<f32>,
+
+    f: Vec2<f32>,
+
+    g: f32,
+    m: f32,
+}
+
+impl Physics {
+    pub fn new(pos: Vec2<f32>, v: Vec2<f32>, m: f32, g: f32) -> Self {
+        Self {
+            pos,
+            v,
+            a: Vec2(0., 0.),
+            f: Vec2(0., m * g),
+            g,
+            m,
+        }
+    }
+
+    /// Update positon, velocity and acceleration.
+    pub fn update(&mut self, dt: f32) {
+        self.a = self.f / self.m;
+        self.pos = self.pos + self.v * dt + (self.a * dt.powi(2)) / 2.;
+        self.v = self.v + self.a * dt;
+    }
+
+    /// Apply a new force on the object.
+    pub fn add_force(&mut self, force: Vec2<f32>) {
+        self.f = self.f + force;
+    }
+
+    pub fn remove_force(&mut self, force: Vec2<f32>) {
+        self.f = self.f - force;
+    }
+
+    /// The sum of the forces applied on the object, the weight
+    /// is included.
+    pub fn f(&self) -> &Vec2<f32> {
+        &self.f
+    }
+
+    pub fn pos(&self) -> &Vec2<f32> {
+        &self.pos
+    }
+
+    pub fn v(&self) -> &Vec2<f32> {
+        &self.v
+    }
+
+    pub fn a(&self) -> &Vec2<f32> {
+        &self.a
+    }
 }
