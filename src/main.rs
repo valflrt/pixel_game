@@ -17,8 +17,8 @@ mod color;
 mod game;
 mod mat;
 
-const WIDTH: usize = 100;
-const HEIGHT: usize = 30;
+const WIDTH: usize = 64;
+const HEIGHT: usize = 24;
 
 const BG_COLOR: Color = Color {
     r: 30,
@@ -72,7 +72,7 @@ fn main() {
         (24, 24),
     );
 
-    character.pos.1 = 2;
+    character.pos.1 = 3;
     character.animation.set_state(0);
 
     let mut timer = time::Instant::now();
