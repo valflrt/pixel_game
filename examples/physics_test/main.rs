@@ -2,9 +2,11 @@
 
 use std::time;
 
-use pixel_game::color::Color;
-use pixel_game::game::{Grid, Physics, StaticObject};
-use pixel_game::vec::Vec2;
+use pixel_game_lib::{
+    color::Color,
+    game::{Displayable, Grid, ObjectBuilder, Physics, UniqueFrame},
+    vec::Vec2,
+};
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::LogicalSize,
@@ -14,8 +16,8 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-const WIDTH: usize = 24;
-const HEIGHT: usize = 256;
+const WIDTH: usize = 64;
+const HEIGHT: usize = 64;
 
 const BG_COLOR: Color = Color {
     r: 30,
@@ -47,11 +49,18 @@ fn main() {
 
     let mut grid = Grid::new(BG_COLOR, (WIDTH, HEIGHT));
 
-    let mut object = StaticObject::from_color(Color::white(), (1, 1));
+    let mut object = ObjectBuilder::new()
+        .dims((1, 1))
+        .display(Displayable::UniqueFrame(UniqueFrame::from_color(
+            Color::white(),
+            (1, 1),
+        )))
+        .build();
 
-    let mut physics = Physics::new(Vec2(0., 0.), Vec2(0., 0.), 20., 8.);
+    let mut physics = Physics::new(Vec2(4., 32.), Vec2(40., -80.), 60., 9.81);
+    physics.set_tf_to_w();
 
-    let mut t_n: u32 = 0;
+    let mut n: u8 = 0;
 
     let mut timer = time::Instant::now();
     event_loop.run(move |event, _, control_flow| {
@@ -75,17 +84,15 @@ fn main() {
             window.request_redraw();
         }
 
-        let t = timer.elapsed().as_secs_f32();
-        if t >= 0.01 {
+        n = (n + 1) % 4;
+        if n == 0 {
+            let t = timer.elapsed().as_secs_f32();
             physics.update(t);
-            let pos = physics.pos();
+            let pos = physics.s();
             println!("v: {:?}", physics.v());
-            object.object.pos = (pos.0.round() as usize, pos.1.round() as usize);
+            println!("a: {:?}", physics.a());
+            object.pos = (pos.0.round() as usize, pos.1.round() as usize);
             timer = time::Instant::now();
-            t_n += 1;
-            if t_n == 200 {
-                physics.add_force(Vec2(0., -320.));
-            }
         }
 
         object.draw(&mut grid);

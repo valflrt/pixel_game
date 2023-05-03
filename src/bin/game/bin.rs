@@ -2,8 +2,10 @@
 
 use std::time;
 
-use pixel_game::color::Color;
-use pixel_game::game::{AnimatedObject, Animation, Grid, Move};
+use pixel_game_lib::{
+    color::Color,
+    game::{Animation, Grid, Move, ObjectBuilder},
+};
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::LogicalSize,
@@ -46,8 +48,9 @@ fn main() {
 
     let mut grid = Grid::new(BG_COLOR, (WIDTH, HEIGHT));
 
-    let mut character = AnimatedObject::new(
-        Animation::from_files(
+    let mut character = ObjectBuilder::new()
+        .dims((24, 24))
+        .display(Animation::from_files(
             &[
                 &["assets/sprites/standing.png"],
                 &[
@@ -65,12 +68,11 @@ fn main() {
                 &["assets/sprites/walking_6.png"],
             ],
             (24, 24),
-        ),
-        (24, 24),
-    );
+        ))
+        .build();
 
     character.pos.1 = 27;
-    character.animation.set_state(0);
+    character.display.set_state(0);
 
     let mut timer = time::Instant::now();
 
@@ -86,20 +88,20 @@ fn main() {
             }
 
             if input.key_held(VirtualKeyCode::Left) {
-                character.animation.flip.0 = true;
-                character.animation.set_state(1);
+                character.display.flip().0 = true;
+                character.display.set_state(1);
                 character.direction.0 = Move::Backward;
             } else if input.key_held(VirtualKeyCode::Right) {
-                character.animation.flip.0 = false;
-                character.animation.set_state(1);
+                character.display.flip().0 = false;
+                character.display.set_state(1);
                 character.direction.0 = Move::Forward;
             } else {
-                character.animation.set_state(0);
+                character.display.set_state(0);
                 character.direction.0 = Move::None;
             };
 
             if input.key_pressed(VirtualKeyCode::Up) {
-                character.animation.set_state(2);
+                character.display.set_state(2);
                 character.direction.1 = Move::Backward;
             }
 
@@ -107,25 +109,27 @@ fn main() {
         }
 
         if timer.elapsed().as_millis() >= 80 {
-            character.pos.0 = match character.direction.0 {
+            let pos = &mut character.pos;
+            let direction = &mut character.direction;
+            pos.0 = match direction.0 {
                 Move::Forward => {
-                    if character.pos.0 + 1 != WIDTH {
-                        character.pos.0 + 1
+                    if pos.0 + 1 != WIDTH {
+                        pos.0 + 1
                     } else {
                         0
                     }
                 }
                 Move::Backward => {
-                    if character.pos.0 != 0 {
-                        character.pos.0 - 1
+                    if pos.0 != 0 {
+                        pos.0 - 1
                     } else {
                         WIDTH - 1
                     }
                 }
-                Move::None => character.pos.0,
+                Move::None => pos.0,
             };
 
-            character.next_frame();
+            character.display.update();
             character.draw(&mut grid);
             timer = time::Instant::now();
         }

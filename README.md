@@ -1,6 +1,6 @@
 # Pixel Game
 
-A simple and inefficient helper for building pixelated games.
+A simple pixelated game made using an inefficient built-in helper ([take a look](./src/lib/), it's still interesting).
 
 ## License
 

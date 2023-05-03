@@ -218,17 +218,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
-name = "character_walking_around"
-version = "0.1.0"
-dependencies = [
- "image",
- "pixel_game",
- "pixels",
- "winit",
- "winit_input_helper",
-]
-
-[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -925,20 +914,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
-name = "physics_test"
-version = "0.1.0"
-dependencies = [
- "pixel_game",
- "pixels",
- "winit",
- "winit_input_helper",
-]
-
-[[package]]
 name = "pixel_game"
 version = "0.1.0"
 dependencies = [
  "image",
+ "pixels",
+ "winit",
+ "winit_input_helper",
 ]
 
 [[package]]

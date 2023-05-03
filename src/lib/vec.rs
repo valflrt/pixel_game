@@ -1,7 +1,4 @@
-use std::{
-    fmt::Display,
-    ops::{Add, Div, Mul, Sub},
-};
+use std::ops::{Add, AddAssign, Div, Mul, Sub};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec2<T>(pub T, pub T);
@@ -14,6 +11,15 @@ where
 
     fn add(self, rhs: Self) -> Self::Output {
         Vec2(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl<T> AddAssign for Vec2<T>
+where
+    Vec2<T>: Add<Output = Vec2<T>> + Copy,
+{
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
     }
 }
 

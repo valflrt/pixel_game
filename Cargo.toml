@@ -1,12 +1,20 @@
 [package]
 name = "pixel_game"
+description = "A simple pixelated game made using an inefficient built-in helper"
 version = "0.1.0"
 authors = ["valflrt"]
 edition = "2021"
 
+[lib]
+name = "pixel_game_lib"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "pixel_game"
+path = "src/bin/game/bin.rs"
+
 [dependencies]
 image = { version = "0.24.6", default-features = false, features = ["png"] }
-
-
-[workspace]
-members = ["examples/*"]
+pixels = "0.12.1"
+winit = "0.28.3"
+winit_input_helper = "0.14.1"
