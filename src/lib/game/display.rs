@@ -26,47 +26,64 @@ impl Displayable {
         }
     }
 
-    pub fn dims(&self) -> &(usize, usize) {
+    pub fn dims(&self) -> &(u32, u32) {
         match self {
             Displayable::UniqueFrame(display) => &display.dims,
             Displayable::Frames(display) => &display.dims,
             Displayable::Animation(display) => &display.dims,
         }
     }
-
-    pub fn state(&self) -> usize {
+    pub fn dims_mut(&mut self) -> &mut (u32, u32) {
         match self {
-            Displayable::UniqueFrame(_) => 0,
-            Displayable::Frames(display) => display.state,
-            Displayable::Animation(display) => display.state,
+            Displayable::UniqueFrame(display) => &mut display.dims,
+            Displayable::Frames(display) => &mut display.dims,
+            Displayable::Animation(display) => &mut display.dims,
         }
     }
 
-    pub fn flip(&mut self) -> &mut (bool, bool) {
+    pub fn state(&self) -> &usize {
+        match self {
+            Displayable::UniqueFrame(_) => {
+                panic!("State doesn't exist for UniqueFrame display type.")
+            }
+            Displayable::Frames(display) => &display.state,
+            Displayable::Animation(display) => &display.state,
+        }
+    }
+    pub fn state_mut(&mut self) -> &mut usize {
+        match self {
+            Displayable::UniqueFrame(_) => {
+                panic!("State doesn't exist for UniqueFrame display type.")
+            }
+            Displayable::Frames(display) => &mut display.state,
+            Displayable::Animation(display) => &mut display.state,
+        }
+    }
+
+    pub fn flip(&self) -> &(bool, bool) {
+        match self {
+            Displayable::UniqueFrame(display) => &display.flip,
+            Displayable::Frames(display) => &display.flip,
+            Displayable::Animation(display) => &display.flip,
+        }
+    }
+    pub fn flip_mut(&mut self) -> &mut (bool, bool) {
         match self {
             Displayable::UniqueFrame(display) => &mut display.flip,
             Displayable::Frames(display) => &mut display.flip,
             Displayable::Animation(display) => &mut display.flip,
         }
     }
-
-    pub fn set_state(&mut self, state: usize) {
-        match self {
-            Displayable::Frames(display) => display.state = state,
-            Displayable::Animation(display) => display.state = state,
-            _ => {}
-        }
-    }
 }
 
 pub struct UniqueFrame {
-    pub dims: (usize, usize),
+    dims: (u32, u32),
     state: Mat<Color>,
-    pub flip: (bool, bool),
+    flip: (bool, bool),
 }
 
 impl UniqueFrame {
-    pub fn from_files(path: &str, dims: (usize, usize)) -> Self {
+    pub fn from_files(path: &str, dims: (u32, u32)) -> Self {
         let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
             image::open(path).unwrap().to_rgba8();
 
@@ -89,7 +106,7 @@ impl UniqueFrame {
         }
     }
 
-    pub fn from_color(color: Color, dims: (usize, usize)) -> Self {
+    pub fn from_color(color: Color, dims: (u32, u32)) -> Self {
         UniqueFrame {
             dims,
             state: Mat::new(color, dims),
@@ -105,14 +122,14 @@ impl Into<Displayable> for UniqueFrame {
 }
 
 pub struct Frames {
-    pub dims: (usize, usize),
-    pub state: usize,
+    dims: (u32, u32),
+    state: usize,
     states: Vec<Mat<Color>>,
-    pub flip: (bool, bool),
+    flip: (bool, bool),
 }
 
 impl Frames {
-    pub fn from_files(paths: &[&str], dims: (usize, usize)) -> Self {
+    pub fn from_files(paths: &[&str], dims: (u32, u32)) -> Self {
         let mut states = Vec::new();
         for path in paths {
             let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
@@ -147,15 +164,15 @@ impl Into<Displayable> for Frames {
 }
 
 pub struct Animation {
-    pub dims: (usize, usize),
-    pub state: usize,
-    pub frame: usize,
+    dims: (u32, u32),
+    state: usize,
+    frame: usize,
     states: Vec<Vec<Mat<Color>>>,
-    pub flip: (bool, bool),
+    flip: (bool, bool),
 }
 
 impl Animation {
-    pub fn from_files<T>(paths: &[&[T]], dims: (usize, usize)) -> Self
+    pub fn from_files<T>(paths: &[&[T]], dims: (u32, u32)) -> Self
     where
         T: AsRef<Path>,
     {

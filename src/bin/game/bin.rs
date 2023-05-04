@@ -4,7 +4,7 @@ use std::time;
 
 use pixel_game_lib::{
     color::Color,
-    game::{Animation, Grid, Move, ObjectBuilder},
+    game::{display::Animation, object::ObjectBuilder, physics::Physics, GameBuilder},
 };
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
@@ -15,8 +15,8 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-const WIDTH: usize = 64;
-const HEIGHT: usize = 48;
+const WIDTH: u32 = 64;
+const HEIGHT: u32 = 48;
 
 const BG_COLOR: Color = Color {
     r: 30,
@@ -46,7 +46,10 @@ fn main() {
         Pixels::new(WIDTH as u32, HEIGHT as u32, surface_texture).unwrap()
     };
 
-    let mut grid = Grid::new(BG_COLOR, (WIDTH, HEIGHT));
+    let mut game = GameBuilder::new()
+        .dims((WIDTH, HEIGHT))
+        .background_color(BG_COLOR)
+        .build();
 
     let mut character = ObjectBuilder::new()
         .dims((24, 24))
@@ -69,16 +72,17 @@ fn main() {
             ],
             (24, 24),
         ))
+        .physics(Physics::new((0., 0.), (0., 0.), 58., 9.81))
         .build();
 
-    character.pos.1 = 27;
-    character.display.set_state(0);
+    character.pos_mut().1 = 27;
+    *character.display_mut().state_mut() = 0;
 
     let mut timer = time::Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
-            grid.draw(pixels.frame_mut());
+            game.grid_mut().draw(pixels.frame_mut());
             pixels.render().unwrap()
         }
 
@@ -88,49 +92,49 @@ fn main() {
             }
 
             if input.key_held(VirtualKeyCode::Left) {
-                character.display.flip().0 = true;
-                character.display.set_state(1);
-                character.direction.0 = Move::Backward;
+                character.display_mut().flip_mut().0 = true;
+                *character.display_mut().state_mut() = 1;
+                // character.direction.0 = Move::Backward;
             } else if input.key_held(VirtualKeyCode::Right) {
-                character.display.flip().0 = false;
-                character.display.set_state(1);
-                character.direction.0 = Move::Forward;
+                character.display_mut().flip_mut().0 = false;
+                *character.display_mut().state_mut() = 1;
+                // character.direction.0 = Move::Forward;
             } else {
-                character.display.set_state(0);
-                character.direction.0 = Move::None;
+                *character.display_mut().state_mut() = 0;
+                // character.direction.0 = Move::None;
             };
 
             if input.key_pressed(VirtualKeyCode::Up) {
-                character.display.set_state(2);
-                character.direction.1 = Move::Backward;
+                *character.display_mut().state_mut() = 2;
+                // character.direction.1 = Move::Backward;
             }
 
             window.request_redraw();
         }
 
         if timer.elapsed().as_millis() >= 80 {
-            let pos = &mut character.pos;
-            let direction = &mut character.direction;
-            pos.0 = match direction.0 {
-                Move::Forward => {
-                    if pos.0 + 1 != WIDTH {
-                        pos.0 + 1
-                    } else {
-                        0
-                    }
-                }
-                Move::Backward => {
-                    if pos.0 != 0 {
-                        pos.0 - 1
-                    } else {
-                        WIDTH - 1
-                    }
-                }
-                Move::None => pos.0,
-            };
+            let pos = character.pos_mut();
+            // let direction = &mut character.direction;
+            // pos.0 = match direction.0 {
+            //     Move::Forward => {
+            //         if pos.0 + 1 != WIDTH {
+            //             pos.0 + 1
+            //         } else {
+            //             0
+            //         }
+            //     }
+            //     Move::Backward => {
+            //         if pos.0 != 0 {
+            //             pos.0 - 1
+            //         } else {
+            //             WIDTH - 1
+            //         }
+            //     }
+            //     Move::None => pos.0,
+            // };
 
-            character.display.update();
-            character.draw(&mut grid);
+            character.display_mut().update();
+            character.draw(game.grid_mut());
             timer = time::Instant::now();
         }
     });

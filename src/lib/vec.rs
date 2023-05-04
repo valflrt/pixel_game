@@ -66,3 +66,9 @@ where
         Vec2(self.0 / rhs, self.1 / rhs)
     }
 }
+
+impl<T> Into<Vec2<T>> for (T, T) {
+    fn into(self) -> Vec2<T> {
+        Vec2(self.0, self.1)
+    }
+}

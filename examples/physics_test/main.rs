@@ -4,8 +4,12 @@ use std::time;
 
 use pixel_game_lib::{
     color::Color,
-    game::{Displayable, Grid, ObjectBuilder, Physics, UniqueFrame},
-    vec::Vec2,
+    game::{
+        display::{Displayable, UniqueFrame},
+        object::ObjectBuilder,
+        physics::Physics,
+        GameBuilder,
+    },
 };
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
@@ -16,8 +20,8 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-const WIDTH: usize = 64;
-const HEIGHT: usize = 64;
+const WIDTH: u32 = 196;
+const HEIGHT: u32 = 128;
 
 const BG_COLOR: Color = Color {
     r: 30,
@@ -47,7 +51,10 @@ fn main() {
         Pixels::new(WIDTH as u32, HEIGHT as u32, surface_texture).unwrap()
     };
 
-    let mut grid = Grid::new(BG_COLOR, (WIDTH, HEIGHT));
+    let mut game = GameBuilder::new()
+        .dims((WIDTH, HEIGHT))
+        .background_color(BG_COLOR)
+        .build();
 
     let mut object = ObjectBuilder::new()
         .dims((1, 1))
@@ -55,17 +62,16 @@ fn main() {
             Color::white(),
             (1, 1),
         )))
+        .physics(Physics::new((10., 96.), (0., 0.), 60., 9.81))
         .build();
 
-    let mut physics = Physics::new(Vec2(4., 32.), Vec2(40., -80.), 60., 9.81);
-    physics.set_tf_to_w();
+    object.physics_mut().set_tf_to_w();
 
-    let mut n: u8 = 0;
-
-    let mut timer = time::Instant::now();
+    let total_time = time::Instant::now();
+    let mut timer = total_time.clone();
     event_loop.run(move |event, _, control_flow| {
         if let Event::RedrawRequested(_) = event {
-            grid.draw(pixels.frame_mut());
+            game.grid_mut().draw(pixels.frame_mut());
             pixels.render().unwrap()
         }
 
@@ -74,27 +80,31 @@ fn main() {
                 *control_flow = ControlFlow::Exit
             }
 
-            if input.key_held(VirtualKeyCode::Left) {
-            } else if input.key_held(VirtualKeyCode::Right) {
-            } else {
-            };
-
-            if input.key_pressed(VirtualKeyCode::Up) {}
+            if input.key_pressed(VirtualKeyCode::Space) {
+                object.physics_mut().set_v((120., -160.));
+                println!("hello");
+            }
 
             window.request_redraw();
         }
 
-        n = (n + 1) % 4;
-        if n == 0 {
-            let t = timer.elapsed().as_secs_f32();
-            physics.update(t);
-            let pos = physics.s();
-            println!("v: {:?}", physics.v());
-            println!("a: {:?}", physics.a());
-            object.pos = (pos.0.round() as usize, pos.1.round() as usize);
-            timer = time::Instant::now();
+        // Stops the object to prevent it from going berserk
+        // but you can try it by commenting this piece of code.
+        if object.pos().1 >= 100 {
+            object.physics_mut().reset_all();
         }
 
-        object.draw(&mut grid);
+        let t = timer.elapsed().as_secs_f32();
+        object.physics_mut().update(t);
+
+        let pos = object.physics().s();
+        *object.pos_mut() = (pos.0.round() as u32, pos.1.round() as u32);
+
+        println!("t = {}s", total_time.elapsed().as_secs_f32());
+        println!("v = {:?}", object.physics().v());
+        println!("a = {:?}", object.physics().a());
+
+        timer = time::Instant::now();
+        object.draw(game.grid_mut());
     });
 }

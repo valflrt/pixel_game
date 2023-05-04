@@ -1,204 +1,125 @@
-use crate::{color::Color, mat::Mat, vec::Vec2};
+pub mod display;
+pub mod grid;
+pub mod object;
+pub mod physics;
 
-pub use self::display::*;
+use std::time::{self, Duration};
 
-mod display;
+use pixels::{Pixels, SurfaceTexture};
+use winit::{
+    dpi::LogicalSize,
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
+use winit_input_helper::WinitInputHelper;
 
-#[derive(PartialEq)]
-pub enum Move {
-    Forward,
-    Backward,
-    None,
+use crate::{color::Color, game::grid::Grid};
+
+// TODO Split Game into two parts: update things and draw
+// things.
+
+pub struct Game {
+    dims: (u32, u32),
+    title: String,
+
+    grid: Grid,
+
+    input: WinitInputHelper,
 }
 
-pub struct Grid {
-    default_color: Color,
-    mat: Mat<Color>,
-}
-
-impl Grid {
-    pub fn new(default_color: Color, dims: (usize, usize)) -> Self {
-        Grid {
-            default_color,
-            mat: Mat::new(default_color, dims),
-        }
-    }
-
-    pub fn draw(&self, pixels: &mut [u8]) {
-        for (c, pix) in self.mat.iter().zip(pixels.chunks_exact_mut(4)) {
-            pix.copy_from_slice(&c.to_bytes());
-        }
-    }
-}
-
-pub struct Object {
-    pub pos: (usize, usize),
-    pub dims: (usize, usize),
-    pub direction: (Move, Move),
-
-    pub display: Displayable,
-    pub physics: Option<Physics>,
-
-    last_pixels: Vec<(usize, usize)>,
-}
-
-impl Object {
-    pub fn draw(&mut self, grid: &mut Grid) {
-        for index in &self.last_pixels {
-            grid.mat[*index] = grid.default_color;
-        }
-        self.last_pixels.clear();
-
-        let display = &mut self.display;
-
-        for x in 0..display.dims().0 {
-            for y in 0..display.dims().1 {
-                let pixel = display.current()[(x, y)];
-                let flip = display.flip();
-                let index = (
-                    (self.pos.0 + if flip.0 { self.dims.0 - x } else { x }) % grid.mat.dims().0,
-                    (self.pos.1 + if flip.1 { self.dims.1 - y } else { y }) % grid.mat.dims().1,
-                );
-                if pixel.a == 255 {
-                    grid.mat[index] = pixel;
-                    self.last_pixels.push(index);
-                }
-            }
-        }
-    }
-}
-
-pub struct ObjectBuilder {
-    pos: Option<(usize, usize)>,
-    dims: Option<(usize, usize)>,
-    direction: Option<(Move, Move)>,
-
-    display: Option<Displayable>,
-    physics: Option<Physics>,
-}
-
-impl ObjectBuilder {
-    pub fn new() -> Self {
-        ObjectBuilder {
-            pos: None,
-            dims: None,
-            direction: None,
-            display: None,
-            physics: None,
-        }
-    }
-
-    pub fn dims(mut self, dims: (usize, usize)) -> Self {
-        self.dims = Some(dims);
-        return self;
-    }
-    pub fn pos(mut self, pos: (usize, usize)) -> Self {
-        self.pos = Some(pos);
-        return self;
-    }
-    pub fn direction(mut self, direction: (Move, Move)) -> Self {
-        self.direction = Some(direction);
-        return self;
-    }
-    pub fn display<D>(mut self, display: D) -> Self
+impl Game {
+    pub fn run<U, D>(mut self, update: U, draw: D)
     where
-        D: Into<Displayable>,
+        U: Fn(&Game) + 'static,
+        D: Fn(&Game, Duration) + 'static,
     {
-        self.display = Some(display.into());
-        return self;
-    }
-    pub fn physics(mut self, physics: Physics) -> Self {
-        self.physics = Some(physics);
-        return self;
+        let (width, height) = self.dims;
+
+        let event_loop = EventLoop::new();
+
+        let window = {
+            let size = LogicalSize::new(width as f64, height as f64);
+            let scaled_size = LogicalSize::new(width as f64 * 3.0, height as f64 * 3.0);
+            WindowBuilder::new()
+                .with_title(self.title.clone())
+                .with_inner_size(scaled_size)
+                .with_min_inner_size(size)
+                .build(&event_loop)
+                .unwrap()
+        };
+
+        let mut pixels = {
+            let window_size = window.inner_size();
+            let surface_texture =
+                SurfaceTexture::new(window_size.width, window_size.height, &window);
+            Pixels::new(width as u32, height as u32, surface_texture).unwrap()
+        };
+
+        let total_time = time::Instant::now();
+        let mut timer = total_time.clone();
+        event_loop.run(move |event, _, control_flow| {
+            if let winit::event::Event::RedrawRequested(_) = event {
+                self.grid.draw(pixels.frame_mut());
+                pixels.render().unwrap()
+            }
+
+            if self.input.update(&event) {
+                if self.input.close_requested() {
+                    *control_flow = ControlFlow::Exit
+                }
+
+                update(&self);
+
+                window.request_redraw();
+            }
+
+            draw(&self, timer.elapsed());
+
+            timer = time::Instant::now();
+        });
     }
 
-    pub fn build(self) -> Object {
-        Object {
-            pos: self.pos.unwrap_or((0, 0)),
-            dims: self
-                .dims
-                .expect("Object should have dims, define it with ObjectBuilder::dims(dims)."),
-            direction: self.direction.unwrap_or((Move::None, Move::None)),
-            display: self.display.expect(
-                "Object should have display, define them with ObjectBuilder::display(display).",
-            ),
-            physics: self.physics,
-            last_pixels: Vec::new(),
+    pub fn grid(&self) -> &Grid {
+        &self.grid
+    }
+    pub fn grid_mut(&mut self) -> &mut Grid {
+        &mut self.grid
+    }
+}
+
+pub struct GameBuilder {
+    dims: Option<(u32, u32)>,
+    title: Option<String>,
+    background_color: Option<Color>,
+}
+
+impl GameBuilder {
+    pub fn new() -> Self {
+        GameBuilder {
+            dims: None,
+            title: None,
+            background_color: None,
         }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Hitbox {
-    pos: (usize, usize),
-    dims: (usize, usize),
-}
+    pub fn dims(mut self, dims: (u32, u32)) -> Self {
+        self.dims = Some(dims);
+        self
+    }
+    pub fn background_color(mut self, background_color: Color) -> Self {
+        self.background_color = Some(background_color);
+        self
+    }
 
-pub struct Physics {
-    s: Vec2<f32>,  // position in px
-    v: Vec2<f32>,  // velocity in px/s
-    a: Vec2<f32>,  // acceleration in px/s^2
-    m: f32,        // mass in mu (mass unit)
-    w: f32,        // weight in fu (force unit)
-    tf: Vec2<f32>, // total force in fu
-}
-
-impl Physics {
-    pub fn new(s0: Vec2<f32>, v0: Vec2<f32>, m: f32, g: f32) -> Self {
-        Self {
-            s: s0,
-            v: v0,
-            a: Vec2(0., 0.),
-            tf: Vec2(0., 0.),
-            m,
-            w: m * g,
+    pub fn build(self) -> Game {
+        let dims = self
+            .dims
+            .expect("Game should have dims, define them with GameBuilder::dims(dims)..");
+        Game {
+            dims,
+            title: self.title.unwrap_or("Game".to_string()),
+            grid: Grid::new(dims, self.background_color),
+            input: WinitInputHelper::new(),
         }
-    }
-
-    /// Update positon, velocity and acceleration.
-    pub fn update(&mut self, dt: f32) {
-        let a = self.tf / self.m; // Newton's second law
-        let v = self.a * dt;
-        let s = self.v * dt + (self.a * dt.powi(2)) / 2.;
-
-        self.a += a;
-        self.v += v;
-        self.s += s;
-    }
-
-    /// Apply a new force on the object, updates the total
-    /// force.
-    pub fn apply_force(&mut self, force: Vec2<f32>) {
-        self.tf = self.tf + force;
-    }
-    /// Set the total force to the weight of the object.
-    pub fn set_tf_to_w(&mut self) {
-        self.tf = Vec2(0., self.w);
-    }
-    /// Reset the total force to 0.
-    pub fn reset_tf(&mut self) {
-        self.tf = Vec2(0., 0.);
-    }
-
-    /// The total force applied on the object, the weight is
-    /// included.
-    pub fn tf(&self) -> &Vec2<f32> {
-        &self.tf
-    }
-    // Position of the object in px
-    pub fn s(&self) -> &Vec2<f32> {
-        &self.s
-    }
-    // Velocity of the object in px/s
-    pub fn v(&self) -> &Vec2<f32> {
-        &self.v
-    }
-    // Acceleration of the object in px/s^2
-    pub fn a(&self) -> &Vec2<f32> {
-        &self.a
-    }
-    // Weight of the object in fu (force unit)
-    pub fn w(&self) -> &f32 {
-        &self.w
     }
 }

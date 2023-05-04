@@ -3,16 +3,16 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-/// Matrix (vector in 2 dimensions).
+/// Matrix (like Vec but in 2 dimensions).
 #[derive(Debug, Clone)]
 pub struct Mat<T> {
     vec: Vec<T>,
-    dims: (usize, usize),
+    dims: (u32, u32),
 }
 
 impl<T> Mat<T> {
     /// Create new Mat.
-    pub fn new(default_value: T, dims: (usize, usize)) -> Self
+    pub fn new(default_value: T, dims: (u32, u32)) -> Self
     where
         T: Clone,
     {
@@ -23,18 +23,22 @@ impl<T> Mat<T> {
                 dims.0
                     .checked_mul(dims.1)
                     .expect("matrix dimensions are too big so their product is out of bounds")
+                    .try_into()
+                    .unwrap()
             ],
         }
     }
 
     /// Create Mat from a vector and dimensions, the vector
     /// length must equal the product of the dimensions.
-    pub fn from_vec(vec: Vec<T>, dims: (usize, usize)) -> Self {
+    pub fn from_vec(vec: Vec<T>, dims: (u32, u32)) -> Self {
         assert_eq!(
             vec.len(),
             dims.0
                 .checked_mul(dims.1)
                 .expect("matrix dimensions are too big so their product is out of bounds")
+                .try_into()
+                .unwrap()
         );
         Mat { dims, vec }
     }
@@ -85,7 +89,7 @@ impl<T> Mat<T> {
     }
 
     pub fn to_2d_vec(&self) -> Vec<&[T]> {
-        self.vec.chunks(self.dims.1).collect()
+        self.vec.chunks(self.dims.1.try_into().unwrap()).collect()
     }
 
     pub fn transpose(&mut self)
@@ -107,7 +111,9 @@ impl<T> Mat<T> {
         T: Clone,
     {
         if (!horizontally && vertically) || (horizontally && !vertically) {
-            self.vec.chunks_mut(self.dims.1).for_each(|v| v.reverse());
+            self.vec
+                .chunks_mut(self.dims.1.try_into().unwrap())
+                .for_each(|v| v.reverse());
         }
         if vertically {
             self.vec.reverse();
@@ -119,30 +125,30 @@ impl<T> Mat<T> {
     }
 
     /// The dimensions of the matrix (x, y).
-    pub fn dims(&self) -> &(usize, usize) {
+    pub fn dims(&self) -> &(u32, u32) {
         &self.dims
     }
 }
 
 impl<T, D> Index<D> for Mat<T>
 where
-    D: Into<(usize, usize)>,
+    D: Into<(u32, u32)>,
 {
     type Output = T;
 
     fn index(&self, index: D) -> &Self::Output {
         let (x, y) = index.into();
-        &self.vec[y * self.dims.0 + x]
+        &self.vec[TryInto::<usize>::try_into(y * self.dims.0 + x).unwrap()]
     }
 }
 
 impl<T, D> IndexMut<D> for Mat<T>
 where
-    D: Into<(usize, usize)>,
+    D: Into<(u32, u32)>,
 {
     fn index_mut(&mut self, index: D) -> &mut Self::Output {
         let (x, y) = index.into();
-        &mut self.vec[y * self.dims.0 + x]
+        &mut self.vec[TryInto::<usize>::try_into(y * self.dims.0 + x).unwrap()]
     }
 }
 
