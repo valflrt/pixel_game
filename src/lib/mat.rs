@@ -102,6 +102,7 @@ impl<T> Mat<T> {
         self.vec.chunks(self.dims.1.try_into().unwrap()).collect()
     }
 
+    /// Swap two items in the Mat.
     pub fn swap(&mut self, a: (usize, usize), b: (usize, usize)) {
         let a = self.get_index(a);
         let b = self.get_index(b);
