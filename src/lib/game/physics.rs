@@ -36,8 +36,7 @@ impl Physics {
         self.s += s;
     }
 
-    /// Apply a new force on the object, updates the total
-    /// force.
+    /// Apply a new force on the object, updates the total force.
     pub fn apply_force<F>(&mut self, force: F)
     where
         F: Into<Vec2<f32>>,

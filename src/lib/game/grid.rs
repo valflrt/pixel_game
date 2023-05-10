@@ -1,8 +1,8 @@
-use crate::{color::Color, mat_trait::Mat};
+use crate::{color::Color, mat::Mat};
 
 pub struct Grid {
     background_color: Color,
-    mat: Vec<Color>,
+    mat: Mat<Color>,
     dims: (usize, usize),
 }
 
@@ -11,7 +11,7 @@ impl Grid {
         let background_color = background_color.unwrap_or(Color::transparent());
         Grid {
             background_color,
-            mat: vec![background_color; dims.0 * dims.1],
+            mat: Mat::filled_with(background_color, dims),
             dims,
         }
     }
@@ -24,16 +24,16 @@ impl Grid {
 
     pub fn clear_pixels(&mut self, last_pixels: &Vec<(usize, usize)>) {
         for index in last_pixels {
-            self.mat.set(*index, self.background_color, self.dims);
+            self.mat[*index] = self.background_color;
         }
     }
 
-    pub fn mat(&self) -> &Vec<Color> {
+    pub fn mat(&self) -> &Mat<Color> {
         &self.mat
     }
     // I could do a joke but I won't. Hint: France. Happy
     // googling.
-    pub fn mat_mut(&mut self) -> &mut Vec<Color> {
+    pub fn mat_mut(&mut self) -> &mut Mat<Color> {
         &mut self.mat
     }
 

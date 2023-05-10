@@ -1,5 +1,3 @@
-use crate::mat_trait::Mat;
-
 use super::{display::Drawable, grid::Grid, physics::Physics};
 
 // TODO Find a way to make this less weird.
@@ -22,16 +20,14 @@ impl Object {
 
         for x in 0..display.dims().0 {
             for y in 0..display.dims().1 {
-                let grid_dims = *grid.dims();
-                let frame_dims = *display.dims();
-                let pixel = display.current().get((x, y), frame_dims);
+                let pixel = display.current()[(x, y)];
                 let flip = display.flip();
                 let index = (
-                    (self.pos.0 + if flip.0 { self.dims.0 - x } else { x }) % grid_dims.0,
-                    (self.pos.1 + if flip.1 { self.dims.1 - y } else { y }) % grid_dims.1,
+                    (self.pos.0 + if flip.0 { self.dims.0 - x } else { x }) % grid.dims().0,
+                    (self.pos.1 + if flip.1 { self.dims.1 - y } else { y }) % grid.dims().1,
                 );
                 if pixel.a == 255 {
-                    grid.mat_mut().set(index, *pixel, grid_dims);
+                    grid.mat_mut()[index] = pixel;
                     self.last_pixels.push(index);
                 }
             }

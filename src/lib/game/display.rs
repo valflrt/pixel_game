@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::color::Color;
+use crate::{color::Color, mat::Mat};
 
 pub enum Drawable {
     UniqueFrame(UniqueFrame),
@@ -18,7 +18,7 @@ impl Drawable {
         }
     }
 
-    pub fn current(&self) -> &Vec<Color> {
+    pub fn current(&self) -> &Mat<Color> {
         match self {
             Drawable::UniqueFrame(display) => &display.state,
             Drawable::Frames(display) => &display.states[display.state],
@@ -78,7 +78,7 @@ impl Drawable {
 
 pub struct UniqueFrame {
     dims: (usize, usize),
-    state: Vec<Color>,
+    state: Mat<Color>,
     flip: (bool, bool),
 }
 
@@ -89,16 +89,19 @@ impl UniqueFrame {
 
         UniqueFrame {
             dims,
-            state: image
-                .as_raw()
-                .chunks(4)
-                .map(|v| Color {
-                    r: v[0],
-                    g: v[1],
-                    b: v[2],
-                    a: v[3],
-                })
-                .collect(),
+            state: Mat::from_vec(
+                image
+                    .as_raw()
+                    .chunks(4)
+                    .map(|v| Color {
+                        r: v[0],
+                        g: v[1],
+                        b: v[2],
+                        a: v[3],
+                    })
+                    .collect::<Vec<_>>(),
+                dims,
+            ),
             flip: (false, false),
         }
     }
@@ -106,7 +109,7 @@ impl UniqueFrame {
     pub fn from_color(color: Color, dims: (usize, usize)) -> Self {
         UniqueFrame {
             dims,
-            state: vec![color; dims.0 * dims.1],
+            state: Mat::filled_with(color, dims),
             flip: (false, false),
         }
     }
@@ -121,7 +124,7 @@ impl Into<Drawable> for UniqueFrame {
 pub struct Frames {
     dims: (usize, usize),
     state: usize,
-    states: Vec<Vec<Color>>,
+    states: Vec<Mat<Color>>,
     flip: (bool, bool),
 }
 
@@ -131,7 +134,7 @@ impl Frames {
         for path in paths {
             let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
                 image::open(path).unwrap().to_rgba8();
-            states.push(
+            states.push(Mat::from_vec(
                 image
                     .as_raw()
                     .chunks(4)
@@ -141,8 +144,9 @@ impl Frames {
                         b: v[2],
                         a: v[3],
                     })
-                    .collect(),
-            );
+                    .collect::<Vec<_>>(),
+                dims,
+            ));
         }
         Frames {
             state: 0,
@@ -163,7 +167,7 @@ pub struct Animation {
     dims: (usize, usize),
     state: usize,
     frame: usize,
-    states: Vec<Vec<Vec<Color>>>,
+    states: Vec<Vec<Mat<Color>>>,
     flip: (bool, bool),
 }
 
@@ -187,7 +191,7 @@ impl Animation {
                         a: v[3],
                     })
                     .collect();
-                frames.push(image_pixels);
+                frames.push(Mat::from_vec(image_pixels, dims));
             }
             states.push(frames)
         }
