@@ -1,15 +1,17 @@
-use super::{display::Displayable, grid::Grid, physics::Physics};
+use crate::mat_trait::Mat;
+
+use super::{display::Drawable, grid::Grid, physics::Physics};
 
 // TODO Find a way to make this less weird.
 
 pub struct Object {
-    dims: (u32, u32),
-    pos: (u32, u32),
+    dims: (usize, usize),
+    pos: (usize, usize),
 
-    display: Displayable,
+    display: Drawable,
     physics: Option<Physics>,
 
-    last_pixels: Vec<(u32, u32)>,
+    last_pixels: Vec<(usize, usize)>,
 }
 
 impl Object {
@@ -20,28 +22,30 @@ impl Object {
 
         for x in 0..display.dims().0 {
             for y in 0..display.dims().1 {
-                let pixel = display.current()[(x, y)];
+                let grid_dims = *grid.dims();
+                let frame_dims = *display.dims();
+                let pixel = display.current().get((x, y), frame_dims);
                 let flip = display.flip();
                 let index = (
-                    (self.pos.0 + if flip.0 { self.dims.0 - x } else { x }) % grid.mat().dims().0,
-                    (self.pos.1 + if flip.1 { self.dims.1 - y } else { y }) % grid.mat().dims().1,
+                    (self.pos.0 + if flip.0 { self.dims.0 - x } else { x }) % grid_dims.0,
+                    (self.pos.1 + if flip.1 { self.dims.1 - y } else { y }) % grid_dims.1,
                 );
                 if pixel.a == 255 {
-                    grid.mat_mut()[index] = pixel;
+                    grid.mat_mut().set(index, *pixel, grid_dims);
                     self.last_pixels.push(index);
                 }
             }
         }
     }
 
-    pub fn dims(&self) -> &(u32, u32) {
+    pub fn dims(&self) -> &(usize, usize) {
         &self.dims
     }
 
-    pub fn pos(&self) -> &(u32, u32) {
+    pub fn pos(&self) -> &(usize, usize) {
         &self.pos
     }
-    pub fn pos_mut(&mut self) -> &mut (u32, u32) {
+    pub fn pos_mut(&mut self) -> &mut (usize, usize) {
         &mut self.pos
     }
 
@@ -52,19 +56,19 @@ impl Object {
         self.physics.as_mut().unwrap()
     }
 
-    pub fn display(&self) -> &Displayable {
+    pub fn display(&self) -> &Drawable {
         &self.display
     }
-    pub fn display_mut(&mut self) -> &mut Displayable {
+    pub fn display_mut(&mut self) -> &mut Drawable {
         &mut self.display
     }
 }
 
 pub struct ObjectBuilder {
-    pos: Option<(u32, u32)>,
-    dims: Option<(u32, u32)>,
+    pos: Option<(usize, usize)>,
+    dims: Option<(usize, usize)>,
 
-    display: Option<Displayable>,
+    display: Option<Drawable>,
     physics: Option<Physics>,
 }
 
@@ -78,17 +82,17 @@ impl ObjectBuilder {
         }
     }
 
-    pub fn dims(mut self, dims: (u32, u32)) -> Self {
+    pub fn dims(mut self, dims: (usize, usize)) -> Self {
         self.dims = Some(dims);
         return self;
     }
-    pub fn pos(mut self, pos: (u32, u32)) -> Self {
+    pub fn pos(mut self, pos: (usize, usize)) -> Self {
         self.pos = Some(pos);
         return self;
     }
     pub fn display<D>(mut self, display: D) -> Self
     where
-        D: Into<Displayable>,
+        D: Into<Drawable>,
     {
         self.display = Some(display.into());
         return self;

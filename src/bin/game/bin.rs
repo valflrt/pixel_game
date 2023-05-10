@@ -15,8 +15,8 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-const WIDTH: u32 = 64;
-const HEIGHT: u32 = 48;
+const WIDTH: usize = 64;
+const HEIGHT: usize = 48;
 
 const BG_COLOR: Color = Color {
     r: 30,

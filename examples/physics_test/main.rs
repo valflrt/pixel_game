@@ -5,7 +5,7 @@ use std::time;
 use pixel_game_lib::{
     color::Color,
     game::{
-        display::{Displayable, UniqueFrame},
+        display::{Drawable, UniqueFrame},
         object::ObjectBuilder,
         physics::Physics,
         GameBuilder,
@@ -20,8 +20,8 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-const WIDTH: u32 = 196;
-const HEIGHT: u32 = 128;
+const WIDTH: usize = 196;
+const HEIGHT: usize = 128;
 
 const BG_COLOR: Color = Color {
     r: 30,
@@ -58,7 +58,7 @@ fn main() {
 
     let mut object = ObjectBuilder::new()
         .dims((1, 1))
-        .display(Displayable::UniqueFrame(UniqueFrame::from_color(
+        .display(Drawable::UniqueFrame(UniqueFrame::from_color(
             Color::white(),
             (1, 1),
         )))
@@ -98,7 +98,7 @@ fn main() {
         object.physics_mut().update(t);
 
         let pos = object.physics().s();
-        *object.pos_mut() = (pos.0.round() as u32, pos.1.round() as u32);
+        *object.pos_mut() = (pos.0.round() as usize, pos.1.round() as usize);
 
         println!("t = {}s", total_time.elapsed().as_secs_f32());
         println!("v = {:?}", object.physics().v());

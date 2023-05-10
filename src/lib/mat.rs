@@ -3,26 +3,32 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-/// Matrix (like Vec but in 2 dimensions).
+fn get_index(index: (usize, usize), width: usize) -> usize {
+    TryInto::<usize>::try_into(index.1 * width + index.0).unwrap()
+}
+
+/// Mat (like Vec but in 2 dimensions).
 #[derive(Debug, Clone)]
 pub struct Mat<T> {
     vec: Vec<T>,
-    dims: (u32, u32),
+    dims: (usize, usize),
+    default_value: T,
 }
 
 impl<T> Mat<T> {
     /// Create new Mat.
-    pub fn new(default_value: T, dims: (u32, u32)) -> Self
+    pub fn filled_with(default_value: T, dims: (usize, usize)) -> Self
     where
         T: Clone,
     {
         Mat {
             dims,
+            default_value: default_value.to_owned(),
             vec: vec![
                 default_value;
                 dims.0
                     .checked_mul(dims.1)
-                    .expect("matrix dimensions are too big so their product is out of bounds")
+                    .expect("Mat dimensions are too big so their product is out of bounds")
                     .try_into()
                     .unwrap()
             ],
@@ -31,16 +37,24 @@ impl<T> Mat<T> {
 
     /// Create Mat from a vector and dimensions, the vector
     /// length must equal the product of the dimensions.
-    pub fn from_vec(vec: Vec<T>, dims: (u32, u32)) -> Self {
+    pub fn from_vec(vec: Vec<T>, dims: (usize, usize)) -> Self
+    where
+        T: Clone,
+    {
         assert_eq!(
             vec.len(),
             dims.0
                 .checked_mul(dims.1)
-                .expect("matrix dimensions are too big so their product is out of bounds")
+                .expect("Mat dimensions are too big so their product is out of bounds")
                 .try_into()
                 .unwrap()
         );
-        Mat { dims, vec }
+        let default_value = vec[0].to_owned();
+        Mat {
+            dims,
+            vec,
+            default_value,
+        }
     }
 
     /// Fill the Mat with the given value.
@@ -88,67 +102,110 @@ impl<T> Mat<T> {
         self.vec.to_owned()
     }
 
+    /// Return the 2d vector representation of the Mat.
     pub fn to_2d_vec(&self) -> Vec<&[T]> {
         self.vec.chunks(self.dims.1.try_into().unwrap()).collect()
     }
 
+    pub fn swap(&mut self, a: (usize, usize), b: (usize, usize)) {
+        let a = self.get_index(a);
+        let b = self.get_index(b);
+        self.vec.swap(a, b);
+    }
+
+    /// Transpose the Mat.
     pub fn transpose(&mut self)
     where
         T: Clone,
     {
-        let mut mat = self.clone();
-        mat.invert_dims();
-        for x in 0..mat.dims.0 {
-            for y in 0..mat.dims.1 {
-                self[(y, x)] = mat[(x, y)].clone();
+        let old = self.vec.to_owned();
+        for x in 0..self.dims.0 {
+            for y in 0..self.dims.1 {
+                let index = self.get_index((x, y));
+                let swapped_index = get_index((y, x), self.dims.1);
+                self.vec[swapped_index] = old[index].to_owned();
             }
         }
         self.invert_dims();
     }
 
-    pub fn reverse(&mut self, horizontally: bool, vertically: bool)
+    /// Flip the Mat around the horizontal axis, the vertical
+    /// axis, or both.
+    pub fn flip(&mut self, h: bool, v: bool)
     where
         T: Clone,
     {
-        if (!horizontally && vertically) || (horizontally && !vertically) {
-            self.vec
-                .chunks_mut(self.dims.1.try_into().unwrap())
-                .for_each(|v| v.reverse());
-        }
-        if vertically {
-            self.vec.reverse();
+        if h && v {
+            self.vec = self.sub_mat((self.dims.0 - 1, self.dims.1 - 1), (0, 0)).vec;
+        } else if h {
+            self.vec = self.sub_mat((self.dims.0 - 1, self.dims.1 - 1), (0, 0)).vec;
+        } else if v {
+            self.vec = self.sub_mat((self.dims.0 - 1, self.dims.1 - 1), (0, 0)).vec;
         }
     }
 
+    /// Inverts the dimensions of the Mat.
     pub fn invert_dims(&mut self) {
         self.dims = (self.dims.1, self.dims.0);
     }
 
-    /// The dimensions of the matrix (x, y).
-    pub fn dims(&self) -> &(u32, u32) {
+    /// Create a sub-Mat from index `a` to index `b`.
+    pub fn sub_mat(&self, a: (usize, usize), dims: (isize, isize)) -> Mat<T>
+    where
+        T: Clone,
+    {
+        let b = (
+            a.0.wrapping_add(dims.0 as usize),
+            a.1.wrapping_add(dims.1 as usize),
+        );
+
+        println!("{b:?}");
+
+        assert!(a.0 < self.dims.0);
+        assert!(a.1 < self.dims.1);
+        // assert!(a.0.abs_diff(b.0) < self.dims.0);
+        // assert!(a.1.abs_diff(b.1) < self.dims.1);
+
+        let dims = (a.0.abs_diff(b.0) + 1, a.1.abs_diff(b.1) + 1);
+        let mut mat = Mat::filled_with(self.default_value.to_owned(), dims);
+
+        for (x, u) in (a.0..b.0).enumerate() {
+            for (y, v) in (a.1..b.1).enumerate() {
+                mat[(x, y)] = self[(u, v)].to_owned();
+            }
+        }
+        mat
+    }
+
+    /// The dimensions of the Mat (x and y).
+    pub fn dims(&self) -> &(usize, usize) {
         &self.dims
+    }
+
+    fn get_index(&self, index: (usize, usize)) -> usize {
+        get_index(index, self.dims.0)
     }
 }
 
 impl<T, D> Index<D> for Mat<T>
 where
-    D: Into<(u32, u32)>,
+    D: Into<(usize, usize)>,
 {
     type Output = T;
 
     fn index(&self, index: D) -> &Self::Output {
-        let (x, y) = index.into();
-        &self.vec[TryInto::<usize>::try_into(y * self.dims.0 + x).unwrap()]
+        let index = self.get_index(index.into());
+        &self.vec[index]
     }
 }
 
 impl<T, D> IndexMut<D> for Mat<T>
 where
-    D: Into<(u32, u32)>,
+    D: Into<(usize, usize)>,
 {
     fn index_mut(&mut self, index: D) -> &mut Self::Output {
-        let (x, y) = index.into();
-        &mut self.vec[TryInto::<usize>::try_into(y * self.dims.0 + x).unwrap()]
+        let index = self.get_index(index.into());
+        &mut self.vec[index]
     }
 }
 
@@ -196,7 +253,7 @@ mod test {
 
     #[test]
     fn index() {
-        let mut vec: Mat<bool> = Mat::new(false, (1, 1));
+        let mut vec: Mat<bool> = Mat::filled_with(false, (1, 1));
 
         assert_eq!(vec[(0, 0)], false);
 
@@ -207,7 +264,7 @@ mod test {
 
     #[test]
     fn fill() {
-        let mut vec: Mat<bool> = Mat::new(false, (2, 2));
+        let mut vec: Mat<bool> = Mat::filled_with(false, (2, 2));
 
         vec.fill(true);
 
@@ -220,7 +277,7 @@ mod test {
 
     #[test]
     fn fill_with() {
-        let mut mat: Mat<u16> = Mat::new(0, (2, 3));
+        let mut mat: Mat<u16> = Mat::filled_with(0, (2, 3));
 
         let mut n: u16 = 0;
 
@@ -233,20 +290,38 @@ mod test {
     }
 
     #[test]
-    fn transpose() {
-        let mut mat = Mat::from_vec((0..8).collect(), (2, 4));
-        mat.transpose();
+    fn swap() {
+        let mat = Mat::from_vec((0..6).collect(), (3, 2));
 
-        println!("{}", mat);
+        let mut mat1 = mat.clone();
+        let mut mat2 = mat.clone();
+        let mut mat3 = mat.clone();
+
+        mat1.swap((0, 0), (2, 1));
+
+        mat2.swap((1, 0), (1, 0));
+
+        mat3.swap((2, 0), (0, 1));
+        mat3.swap((0, 1), (2, 1));
+
+        assert_eq!(mat1, Mat::from_vec([5, 1, 2, 3, 4, 0].to_vec(), (3, 2)));
+        assert_eq!(mat2, mat);
+        assert_eq!(mat3, Mat::from_vec([0, 1, 3, 5, 4, 2].to_vec(), (3, 2)));
+    }
+
+    #[test]
+    fn transpose() {
+        let mut mat = Mat::from_vec((0..12).collect(), (4, 3));
+        mat.transpose();
 
         assert_eq!(
             mat,
-            Mat::from_vec([0, 4, 1, 5, 2, 6, 3, 7].to_vec(), (4, 2))
+            Mat::from_vec([0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11].to_vec(), (3, 4))
         );
     }
 
     #[test]
-    fn reverse() {
+    fn flip() {
         let mat = Mat::from_vec((0..8).collect(), (2, 4));
 
         let mut mat1 = mat.clone();
@@ -254,25 +329,49 @@ mod test {
         let mut mat3 = mat.clone();
         let mut mat4 = mat.clone();
 
-        mat1.reverse(false, false);
+        mat1.flip(false, false);
         assert_eq!(
             mat1,
             Mat::from_vec([0, 1, 2, 3, 4, 5, 6, 7].to_vec(), (2, 4))
         );
-        mat2.reverse(false, true);
+        mat2.flip(false, true);
         assert_eq!(
             mat2,
             Mat::from_vec([4, 5, 6, 7, 0, 1, 2, 3].to_vec(), (2, 4))
         );
-        mat3.reverse(true, false);
+        mat3.flip(true, false);
         assert_eq!(
             mat3,
             Mat::from_vec([3, 2, 1, 0, 7, 6, 5, 4].to_vec(), (2, 4))
         );
-        mat4.reverse(true, true);
+        mat4.flip(true, true);
         assert_eq!(
             mat4,
             Mat::from_vec([7, 6, 5, 4, 3, 2, 1, 0].to_vec(), (2, 4))
+        );
+    }
+
+    #[test]
+    fn sub_mat() {
+        let mat = Mat::from_vec((0..16).collect(), (4, 4));
+        let sub_mat1 = mat.sub_mat((0, 0), (4, 4));
+        let sub_mat2 = mat.sub_mat((2, 2), (2, 2));
+        let sub_mat3 = mat.sub_mat((0, 0), (4, -4));
+
+        assert_eq!(
+            sub_mat1,
+            Mat::from_vec(
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].to_vec(),
+                (4, 4)
+            )
+        );
+        assert_eq!(sub_mat2, Mat::from_vec([10, 11, 14, 15].to_vec(), (2, 2)));
+        assert_eq!(
+            sub_mat3,
+            Mat::from_vec(
+                [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12].to_vec(),
+                (4, 4)
+            )
         );
     }
 }

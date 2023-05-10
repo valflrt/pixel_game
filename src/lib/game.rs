@@ -19,7 +19,7 @@ use crate::{color::Color, game::grid::Grid};
 // things.
 
 pub struct Game {
-    dims: (u32, u32),
+    dims: (usize, usize),
     title: String,
 
     grid: Grid,
@@ -30,7 +30,7 @@ pub struct Game {
 impl Game {
     pub fn run<U, D>(mut self, update: U, draw: D)
     where
-        U: Fn(&Game) + 'static,
+        U: Fn(&Game, &WinitInputHelper) + 'static,
         D: Fn(&Game, Duration) + 'static,
     {
         let (width, height) = self.dims;
@@ -68,7 +68,7 @@ impl Game {
                     *control_flow = ControlFlow::Exit
                 }
 
-                update(&self);
+                update(&self, &self.input);
 
                 window.request_redraw();
             }
@@ -88,7 +88,7 @@ impl Game {
 }
 
 pub struct GameBuilder {
-    dims: Option<(u32, u32)>,
+    dims: Option<(usize, usize)>,
     title: Option<String>,
     background_color: Option<Color>,
 }
@@ -102,7 +102,7 @@ impl GameBuilder {
         }
     }
 
-    pub fn dims(mut self, dims: (u32, u32)) -> Self {
+    pub fn dims(mut self, dims: (usize, usize)) -> Self {
         self.dims = Some(dims);
         self
     }
