@@ -1,7 +1,5 @@
-pub mod display;
 pub mod grid;
 pub mod object;
-pub mod physics;
 
 use std::time::{self, Duration};
 
