@@ -3,7 +3,15 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-fn get_index(index: (usize, usize), width: usize) -> usize {
+fn dims_product(dims: (usize, usize)) -> usize {
+    dims.0
+        .checked_mul(dims.1)
+        .expect("Mat dimensions are too big so their product is out of bounds")
+        .try_into()
+        .unwrap()
+}
+
+fn get_vec_index(index: (usize, usize), width: usize) -> usize {
     TryInto::<usize>::try_into(index.1 * width + index.0).unwrap()
 }
 
@@ -22,33 +30,19 @@ impl<T> Mat<T> {
     {
         Mat {
             dims,
-            vec: vec![
-                default_value;
-                dims.0
-                    .checked_mul(dims.1)
-                    .expect("Mat dimensions are too big so their product is out of bounds")
-                    .try_into()
-                    .unwrap()
-            ],
+            vec: vec![default_value; dims_product(dims)],
         }
     }
 
-    /// Create Mat from a vector and dimensions, the vector length
-    /// must equal the product of the dimensions.
+    /// Create Mat from a Vec and dimensions, the Vec length must
+    /// equal the product of the dimensions.
     pub fn from_vec<V>(vec: V, dims: (usize, usize)) -> Self
     where
         T: Clone,
         V: Into<Vec<T>>,
     {
         let vec = vec.into();
-        assert_eq!(
-            vec.len(),
-            dims.0
-                .checked_mul(dims.1)
-                .expect("Mat dimensions are too big so their product is out of bounds")
-                .try_into()
-                .unwrap()
-        );
+        assert_eq!(vec.len(), dims_product(dims));
         Mat { dims, vec }
     }
 
@@ -60,14 +54,106 @@ impl<T> Mat<T> {
         self.vec.fill(value);
     }
 
-    /// Fill the Mat with the value returned by the provided
-    /// closure.
-    pub fn fill_with<F>(&mut self, mut f: F)
+    /// Fill the Mat row-wise with the value returned by the
+    /// provided closure.
+    pub fn fill_with_r<F>(&mut self, mut f: F)
     where
-        F: FnMut() -> T,
+        F: FnMut((usize, usize)) -> T,
     {
-        for el in self.vec.iter_mut() {
-            *el = f();
+        for y in 0..self.dims.1 {
+            for x in 0..self.dims.0 {
+                self[(x, y)] = f((x, y))
+            }
+        }
+    }
+
+    /// Fill the Mat column-wise with the value returned by the
+    /// provided closure.
+    pub fn fill_with_c<F>(&mut self, mut f: F)
+    where
+        F: FnMut((usize, usize)) -> T,
+    {
+        for x in 0..self.dims.0 {
+            for y in 0..self.dims.1 {
+                self[(x, y)] = f((x, y))
+            }
+        }
+    }
+
+    /// Swap two items with indexes `a` and `b`.
+    pub fn swap(&mut self, a: (usize, usize), b: (usize, usize)) {
+        let a = self.get_vec_index(a);
+        let b = self.get_vec_index(b);
+        self.vec.swap(a, b);
+    }
+
+    /// Transpose the Mat.
+    pub fn transpose(&mut self)
+    where
+        T: Clone,
+    {
+        let old = self.vec.to_owned();
+        for x in 0..self.dims.0 {
+            for y in 0..self.dims.1 {
+                let index = self.get_vec_index((x, y));
+                let swapped_index = get_vec_index((y, x), self.dims.1);
+                self.vec[swapped_index] = old[index].to_owned();
+            }
+        }
+        self.invert_dims();
+    }
+
+    /// Flip the Mat row-wise.
+    fn flip_r(&mut self)
+    where
+        T: Clone,
+    {
+        *self = self.slice((0, 0), self.dims, (true, false)).to_mat();
+    }
+
+    /// Flip the Mat column-wise.
+    fn flip_c(&mut self)
+    where
+        T: Clone,
+    {
+        *self = self.slice((0, 0), self.dims, (false, true)).to_mat();
+    }
+
+    /// Flip the Mat row-wise and column-wise.
+    fn flip_both(&mut self)
+    where
+        T: Clone,
+    {
+        *self = self.slice((0, 0), self.dims, (true, true)).to_mat();
+    }
+
+    /// Inverts the dimensions of the Mat.
+    pub fn invert_dims(&mut self) {
+        self.dims = (self.dims.1, self.dims.0);
+    }
+
+    /// Create a MatSlice starting at `index` with width and height
+    /// `dims`. Flip the selected area row-wise with `flip.0`
+    /// and/or column-wise with `flip.1`.
+    fn slice<'a>(
+        &'a self,
+        index: (usize, usize),
+        dims: (usize, usize),
+        flip: (bool, bool),
+    ) -> MatSlice<'a, T>
+    where
+        T: Clone,
+    {
+        assert!(index.0 < self.dims.0);
+        assert!(index.1 < self.dims.1);
+        assert!(index.0 + dims.0 - 1 < self.dims.0);
+        assert!(index.1 + dims.1 - 1 < self.dims.1);
+
+        MatSlice {
+            mat: &self,
+            index,
+            dims,
+            flip,
         }
     }
 
@@ -83,13 +169,7 @@ impl<T> Mat<T> {
         self.vec.iter_mut()
     }
 
-    /// Return a reference to the vector representation of the
-    /// Mat.
-    pub fn vec(&self) -> &Vec<T> {
-        &self.vec
-    }
-
-    /// Return the vector representation of the Mat.
+    /// Return the Vec representation of the Mat.
     pub fn to_vec(&self) -> Vec<T>
     where
         T: Clone,
@@ -97,89 +177,21 @@ impl<T> Mat<T> {
         self.vec.to_owned()
     }
 
-    /// Return the 2d vector representation of the Mat.
+    /// Return the 2d Vec representation of the Mat.
     pub fn to_2d_vec(&self) -> Vec<&[T]> {
         self.vec.chunks(self.dims.1.try_into().unwrap()).collect()
     }
 
-    pub fn swap(&mut self, a: (usize, usize), b: (usize, usize)) {
-        let a = self.get_index(a);
-        let b = self.get_index(b);
-        self.vec.swap(a, b);
-    }
-
-    /// Transpose the Mat.
-    pub fn transpose(&mut self)
+    pub fn as_slice(&self) -> MatSlice<T>
     where
         T: Clone,
     {
-        let old = self.vec.to_owned();
-        for x in 0..self.dims.0 {
-            for y in 0..self.dims.1 {
-                let index = self.get_index((x, y));
-                let swapped_index = get_index((y, x), self.dims.1);
-                self.vec[swapped_index] = old[index].to_owned();
-            }
-        }
-        self.invert_dims();
+        self.slice((0, 0), self.dims, (false, false))
     }
 
-    /// Flip the Vec in 2d around the x axis.
-    fn flip_h(&mut self)
-    where
-        T: Clone,
-    {
-        *self = self.slice((0, 0), self.dims, (true, false));
-    }
-
-    /// Flip the Vec in 2d around the y axis.
-    fn flip_v(&mut self)
-    where
-        T: Clone,
-    {
-        *self = self.slice((0, 0), self.dims, (false, true));
-    }
-
-    /// Flip the Vec in 2d around the x and y axes.
-    fn flip_both(&mut self)
-    where
-        T: Clone,
-    {
-        *self = self.slice((0, 0), self.dims, (true, true));
-    }
-
-    /// Inverts the dimensions of the Mat.
-    pub fn invert_dims(&mut self) {
-        self.dims = (self.dims.1, self.dims.0);
-    }
-
-    /// Create a new Mat starting at `index` with width and height
-    /// `dims`, `flip` is used to flip the selected area around
-    /// the x and/or y axis.
-    fn slice(&self, index: (usize, usize), dims: (usize, usize), flip: (bool, bool)) -> Mat<T>
-    where
-        T: Clone,
-    {
-        let b = (index.0 + dims.0 - 1, index.1 + dims.1 - 1);
-
-        assert!(index.0 < self.dims.0);
-        assert!(index.1 < self.dims.1);
-        assert!(b.0 < self.dims.0);
-        assert!(b.1 < self.dims.1);
-
-        let mut new_vec = self.vec.clone();
-        new_vec.truncate(dims.0 * dims.1);
-
-        for (x, u) in (index.0..=b.0).enumerate() {
-            for (y, v) in (index.1..=b.1).enumerate() {
-                let index = (
-                    if !flip.0 { x } else { dims.0 - 1 - x },
-                    if !flip.1 { y } else { dims.1 - 1 - y },
-                );
-                new_vec[get_index(index, dims.0)] = self[(u, v)].to_owned();
-            }
-        }
-        Mat::from_vec(new_vec, dims)
+    /// Return a reference to the Vec representation of the Mat.
+    pub fn vec(&self) -> &Vec<T> {
+        &self.vec
     }
 
     /// The dimensions of the Mat (x and y).
@@ -187,29 +199,29 @@ impl<T> Mat<T> {
         &self.dims
     }
 
-    fn get_index(&self, index: (usize, usize)) -> usize {
-        get_index(index, self.dims.0)
+    fn get_vec_index(&self, index: (usize, usize)) -> usize {
+        get_vec_index(index, self.dims.0)
     }
 }
 
-impl<T, D> Index<D> for Mat<T>
+impl<T, I> Index<I> for Mat<T>
 where
-    D: Into<(usize, usize)>,
+    I: Into<(usize, usize)>,
 {
     type Output = T;
 
-    fn index(&self, index: D) -> &Self::Output {
-        let index = self.get_index(index.into());
+    fn index(&self, index: I) -> &Self::Output {
+        let index = self.get_vec_index(index.into());
         &self.vec[index]
     }
 }
 
-impl<T, D> IndexMut<D> for Mat<T>
+impl<T, I> IndexMut<I> for Mat<T>
 where
-    D: Into<(usize, usize)>,
+    I: Into<(usize, usize)>,
 {
-    fn index_mut(&mut self, index: D) -> &mut Self::Output {
-        let index = self.get_index(index.into());
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        let index = self.get_vec_index(index.into());
         &mut self.vec[index]
     }
 }
@@ -229,6 +241,66 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.to_2d_vec())
+    }
+}
+
+pub struct MatSlice<'a, T> {
+    mat: &'a Mat<T>,
+    index: (usize, usize),
+    dims: (usize, usize),
+    flip: (bool, bool),
+}
+
+impl<'a, T> MatSlice<'a, T> {
+    pub fn to_mat(&self) -> Mat<T>
+    where
+        T: Clone,
+    {
+        let b = (
+            self.index.0 + self.dims.0 - 1,
+            self.index.1 + self.dims.1 - 1,
+        );
+
+        let mut new_vec = self.mat.vec.clone();
+        new_vec.truncate(dims_product(self.dims));
+
+        for (x, u) in (self.index.0..=b.0).enumerate() {
+            for (y, v) in (self.index.1..=b.1).enumerate() {
+                let index = (
+                    if !self.flip.0 { x } else { self.dims.0 - 1 - x },
+                    if !self.flip.1 { y } else { self.dims.1 - 1 - y },
+                );
+                new_vec[get_vec_index(index, self.dims.0)] = self[(u, v)].to_owned();
+            }
+        }
+        Mat::from_vec(new_vec, self.dims)
+    }
+
+    pub fn dims(&self) -> &(usize, usize) {
+        &self.dims
+    }
+}
+
+impl<'a, T, I> Index<I> for MatSlice<'a, T>
+where
+    I: Into<(usize, usize)>,
+{
+    type Output = T;
+    fn index(&self, index: I) -> &Self::Output {
+        let index = index.into();
+        let index = (
+            if !self.flip.0 {
+                self.index.0 + index.0
+            } else {
+                self.index.0 + self.dims.0 - 1 - index.0
+            },
+            if !self.flip.1 {
+                self.index.1 + index.1
+            } else {
+                self.index.1 + self.dims.1 - 1 - index.1
+            },
+        );
+        &self.mat[index]
     }
 }
 
@@ -256,24 +328,24 @@ mod test {
 
     #[test]
     fn index() {
-        let mut vec: Mat<bool> = Mat::filled_with(false, (1, 1));
+        let mut mat: Mat<bool> = Mat::filled_with(false, (1, 1));
 
-        assert_eq!(vec[(0, 0)], false);
+        assert_eq!(mat[(0, 0)], false);
 
-        vec[(0, 0)] = true;
+        mat[(0, 0)] = true;
 
-        assert_eq!(vec[(0, 0)], true);
+        assert_eq!(mat[(0, 0)], true);
     }
 
     #[test]
     fn fill() {
-        let mut vec: Mat<bool> = Mat::filled_with(false, (2, 2));
+        let mut mat: Mat<bool> = Mat::filled_with(false, (2, 2));
 
-        vec.fill(true);
+        mat.fill(true);
 
         for x in 0..2 {
             for y in 0..2 {
-                assert_eq!(vec[(x, y)], true);
+                assert_eq!(mat[(x, y)], true);
             }
         }
     }
@@ -284,7 +356,7 @@ mod test {
 
         let mut n: u16 = 0;
 
-        mat.fill_with(|| {
+        mat.fill_with_r(|_| {
             n += 1;
             n - 1
         });
@@ -328,16 +400,16 @@ mod test {
         let mat = Mat::from_vec((0..8).collect::<Vec<_>>(), (4, 2));
 
         let mut mat1 = mat.clone();
-        mat1.flip_v();
+        mat1.flip_c();
         assert_eq!(mat1, Mat::from_vec([4, 5, 6, 7, 0, 1, 2, 3], mat1.dims));
 
         let mut mat2 = mat.clone();
-        mat2.flip_h();
+        mat2.flip_r();
         assert_eq!(mat2, Mat::from_vec([3, 2, 1, 0, 7, 6, 5, 4], mat2.dims));
 
         let mut mat3 = mat.clone();
-        mat3.flip_h();
-        mat3.flip_v();
+        mat3.flip_r();
+        mat3.flip_c();
         assert_eq!(mat3, Mat::from_vec([7, 6, 5, 4, 3, 2, 1, 0], mat3.dims));
     }
 
@@ -346,55 +418,66 @@ mod test {
         let mat = Mat::from_vec((0..16).collect::<Vec<_>>(), (4, 4));
 
         assert_eq!(
-            mat.slice((0, 0), (4, 4), (false, false)),
+            mat.slice((0, 0), (4, 4), (false, false)).to_mat(),
             Mat::from_vec(
                 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
                 (4, 4)
             )
         );
         assert_eq!(
-            mat.slice((2, 2), (2, 2), (false, false)),
+            mat.slice((2, 2), (2, 2), (false, false)).to_mat(),
             Mat::from_vec([10, 11, 14, 15], (2, 2))
         );
         assert_eq!(
-            mat.slice((0, 0), (4, 4), (true, false)),
+            mat.slice((0, 0), (4, 4), (true, false)).to_mat(),
             Mat::from_vec(
                 [3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12],
                 (4, 4)
             )
         );
         assert_eq!(
-            mat.slice((0, 0), (4, 1), (true, false)),
+            mat.slice((0, 0), (4, 1), (true, false)).to_mat(),
             Mat::from_vec([3, 2, 1, 0], (4, 1))
         );
         assert_eq!(
-            mat.slice((0, 1), (4, 1), (false, false)),
+            mat.slice((0, 1), (4, 1), (false, false)).to_mat(),
             Mat::from_vec([4, 5, 6, 7], (4, 1))
         );
 
         assert_eq!(
-            mat.slice((0, 0), (4, 4), (false, true)),
+            mat.slice((0, 0), (4, 4), (false, true)).to_mat(),
             Mat::from_vec(
                 [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3],
                 (4, 4)
             )
         );
         assert_eq!(
-            mat.slice((0, 0), (4, 4), (true, true)),
+            mat.slice((0, 0), (4, 4), (true, true)).to_mat(),
             Mat::from_vec(
                 [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
                 (4, 4)
             )
         );
         assert_eq!(
-            mat.slice((0, 0), (1, 4), (false, true)),
+            mat.slice((0, 0), (1, 4), (false, true)).to_mat(),
             Mat::from_vec([12, 8, 4, 0], (1, 4))
         );
     }
 
     #[test]
+    #[should_panic]
     fn slice_fail() {
         let mat = Mat::from_vec((0..16).collect::<Vec<_>>(), (4, 4));
         mat.slice((1, 1), (4, 4), (false, false));
+    }
+
+    #[test]
+    fn mat_slice_index() {
+        let mat = Mat::from_vec((0..16).collect::<Vec<_>>(), (4, 4));
+
+        assert_eq!(mat.slice((1, 1), (2, 2), (false, false))[(0, 0)], 5);
+        assert_eq!(mat.slice((1, 1), (2, 2), (true, false))[(0, 0)], 6);
+        assert_eq!(mat.slice((1, 1), (2, 2), (true, true))[(0, 0)], 10);
+        assert_eq!(mat.slice((1, 1), (2, 2), (true, true))[(1, 1)], 5);
     }
 }
