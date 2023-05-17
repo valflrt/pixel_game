@@ -4,24 +4,14 @@ use std::time;
 
 use pixel_game_lib::{
     color::Color,
-    game::{
-        display::{Drawable, UniqueFrame},
-        object::ObjectBuilder,
-        physics::Physics,
-        GameBuilder,
-    },
+    drawable::{Drawable, UniqueFrame},
+    game::{object::Object, GameBuilder},
+    physics::Physics,
 };
-use pixels::{Pixels, SurfaceTexture};
-use winit::{
-    dpi::LogicalSize,
-    event::{Event, VirtualKeyCode},
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
-};
-use winit_input_helper::WinitInputHelper;
+use winit::event::VirtualKeyCode;
 
-const WIDTH: usize = 196;
-const HEIGHT: usize = 128;
+const WIDTH: i32 = 196;
+const HEIGHT: i32 = 128;
 
 const BG_COLOR: Color = Color {
     r: 30,
@@ -31,80 +21,55 @@ const BG_COLOR: Color = Color {
 };
 
 fn main() {
-    let event_loop = EventLoop::new();
-    let mut input = WinitInputHelper::new();
-
-    let window = {
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        let scaled_size = LogicalSize::new(WIDTH as f64 * 3.0, HEIGHT as f64 * 3.0);
-        WindowBuilder::new()
-            .with_title("game")
-            .with_inner_size(scaled_size)
-            .with_min_inner_size(size)
-            .build(&event_loop)
-            .unwrap()
-    };
-
-    let mut pixels = {
-        let window_size = window.inner_size();
-        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WIDTH as u32, HEIGHT as u32, surface_texture).unwrap()
-    };
-
-    let mut game = GameBuilder::new()
+    let game = GameBuilder::new()
         .dims((WIDTH, HEIGHT))
         .background_color(BG_COLOR)
         .build();
 
-    let mut object = ObjectBuilder::new()
-        .dims((1, 1))
-        .display(Drawable::UniqueFrame(UniqueFrame::from_color(
-            Color::white(),
-            (1, 1),
-        )))
-        .physics(Physics::new((10., 96.), (0., 0.), 60., 9.81))
-        .build();
+    let mut object = Object::new((0, 0), (1, 1));
 
-    object.physics_mut().set_tf_to_w();
+    let mut physics = Physics::new((10., 96.), (0., 0.), 60., 9.81);
+
+    let mut animation: Drawable = UniqueFrame::from_color(Color::white(), (1, 1)).into();
+    let image = animation.next().unwrap();
+
+    physics.set_tf_to_w();
 
     let total_time = time::Instant::now();
     let mut timer = total_time.clone();
-    event_loop.run(move |event, _, control_flow| {
-        if let Event::RedrawRequested(_) = event {
-            game.grid_mut().draw(pixels.frame_mut());
-            pixels.render().unwrap()
-        }
 
-        if input.update(&event) {
-            if input.close_requested() {
-                *control_flow = ControlFlow::Exit
-            }
-
-            if input.key_pressed(VirtualKeyCode::Space) {
-                object.physics_mut().set_v((120., -160.));
-                println!("hello");
-            }
-
-            window.request_redraw();
-        }
-
+    game.run(move |game| {
         // Stops the object to prevent it from going berserk
         // but you can try it by commenting this piece of code.
-        if object.pos().1 >= 100 {
-            object.physics_mut().reset_all();
+        // if object.pos().1 >= 100 && physics.v().1.is_sign_positive() {
+        //     physics.reset_all();
+        // } else {
+        //     physics.set_tf_to_w();
+        // }
+
+        if game.input().key_held(VirtualKeyCode::Left) {
+            physics.apply_force((-200., 0.));
+        } else if game.input().key_held(VirtualKeyCode::Up) {
+            physics.apply_force((0., -200.));
+        } else if game.input().key_held(VirtualKeyCode::Right) {
+            physics.apply_force((200., 0.));
         }
 
-        let t = timer.elapsed().as_secs_f32();
-        object.physics_mut().update(t);
+        let t = timer.elapsed().as_secs_f64();
+        physics.update(t);
 
-        let pos = object.physics().s();
-        *object.pos_mut() = (pos.0.round() as usize, pos.1.round() as usize);
+        let pos = *physics.pos();
+        *object.pos_mut() = pos.into();
 
         println!("t = {}s", total_time.elapsed().as_secs_f32());
-        println!("v = {:?}", object.physics().v());
-        println!("a = {:?}", object.physics().a());
+        println!("v = {:?}", physics.v());
+        println!("a = {:?}", physics.a());
+
+        game.clear(Color::new(0, 0, 0, 0));
+        game.image_at(*object.pos(), &image.as_slice());
+
+        physics.set_tf_to_w();
 
         timer = time::Instant::now();
-        object.draw(game.grid_mut());
     });
 }

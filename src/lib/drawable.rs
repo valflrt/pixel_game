@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{color::Color, mat::Mat};
+use crate::{color::Color, mat::Mat, vec::Vec2};
 
 pub enum Drawable {
     UniqueFrame(UniqueFrame),
@@ -9,31 +9,14 @@ pub enum Drawable {
 }
 
 impl Drawable {
-    pub fn update(&mut self) {
-        match self {
-            Drawable::Animation(display) => {
-                display.frame = (display.frame + 1) % display.states[display.state].len();
-            }
-            _ => {}
-        }
-    }
-
-    pub fn current(&self) -> &Mat<Color> {
-        match self {
-            Drawable::UniqueFrame(display) => &display.state,
-            Drawable::Frames(display) => &display.states[display.state],
-            Drawable::Animation(display) => &display.states[display.state][display.frame],
-        }
-    }
-
-    pub fn dims(&self) -> &(usize, usize) {
+    pub fn dims(&self) -> &Vec2<u32> {
         match self {
             Drawable::UniqueFrame(display) => &display.dims,
             Drawable::Frames(display) => &display.dims,
             Drawable::Animation(display) => &display.dims,
         }
     }
-    pub fn dims_mut(&mut self) -> &mut (usize, usize) {
+    pub fn dims_mut(&mut self) -> &mut Vec2<u32> {
         match self {
             Drawable::UniqueFrame(display) => &mut display.dims,
             Drawable::Frames(display) => &mut display.dims,
@@ -59,31 +42,33 @@ impl Drawable {
             Drawable::Animation(display) => &mut display.state,
         }
     }
+}
 
-    pub fn flip(&self) -> &(bool, bool) {
+impl Iterator for Drawable {
+    type Item = Mat<Color>;
+
+    fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Drawable::UniqueFrame(display) => &display.flip,
-            Drawable::Frames(display) => &display.flip,
-            Drawable::Animation(display) => &display.flip,
-        }
-    }
-    pub fn flip_mut(&mut self) -> &mut (bool, bool) {
-        match self {
-            Drawable::UniqueFrame(display) => &mut display.flip,
-            Drawable::Frames(display) => &mut display.flip,
-            Drawable::Animation(display) => &mut display.flip,
+            Drawable::Animation(d) => {
+                d.frame = (d.frame + 1) % d.states[d.state].len();
+                Some(d.states[d.state][d.frame].to_owned())
+            }
+            Drawable::Frames(d) => {
+                d.state = (d.state + 1) % d.states.len();
+                Some(d.states[d.state].to_owned())
+            }
+            Drawable::UniqueFrame(d) => Some(d.state.to_owned()),
         }
     }
 }
 
 pub struct UniqueFrame {
-    dims: (usize, usize),
+    dims: Vec2<u32>,
     state: Mat<Color>,
-    flip: (bool, bool),
 }
 
 impl UniqueFrame {
-    pub fn from_files(path: &str, dims: (usize, usize)) -> Self {
+    pub fn from_files(path: &str, dims: Vec2<u32>) -> Self {
         let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
             image::open(path).unwrap().to_rgba8();
 
@@ -102,15 +87,17 @@ impl UniqueFrame {
                     .collect::<Vec<_>>(),
                 dims,
             ),
-            flip: (false, false),
         }
     }
 
-    pub fn from_color(color: Color, dims: (usize, usize)) -> Self {
+    pub fn from_color<D>(color: Color, dims: D) -> Self
+    where
+        D: Into<Vec2<u32>>,
+    {
+        let dims = dims.into();
         UniqueFrame {
             dims,
             state: Mat::filled_with(color, dims),
-            flip: (false, false),
         }
     }
 }
@@ -122,14 +109,67 @@ impl Into<Drawable> for UniqueFrame {
 }
 
 pub struct Frames {
-    dims: (usize, usize),
+    dims: Vec2<u32>,
     state: usize,
     states: Vec<Mat<Color>>,
-    flip: (bool, bool),
 }
 
 impl Frames {
-    pub fn from_files(paths: &[&str], dims: (usize, usize)) -> Self {
+    pub fn from_spritesheet<T>(
+        path: T,
+        sprite_dims: Vec2<u32>,
+        spritesheet_dims: Vec2<u32>,
+        n_sprites: usize,
+    ) -> Self
+    where
+        T: AsRef<Path>,
+    {
+        let image = image::open(path).unwrap().to_rgba8();
+        let image_pixels: Vec<Color> = image
+            .as_raw()
+            .chunks(4)
+            .map(|v| Color {
+                r: v[0],
+                g: v[1],
+                b: v[2],
+                a: v[3],
+            })
+            .collect();
+        let image_dims = (
+            sprite_dims.0 * spritesheet_dims.0,
+            sprite_dims.1 * spritesheet_dims.1,
+        );
+        let image_mat = Mat::from_vec(image_pixels, image_dims);
+
+        let mut states = Vec::new();
+
+        let mut n: usize = 0;
+        for v in 0..image_dims.1 {
+            for u in 0..image_dims.0 {
+                if n == n_sprites {
+                    break;
+                } else {
+                    n += 1;
+                }
+                states.push(
+                    image_mat
+                        .slice((u, v), sprite_dims, (false, false))
+                        .to_mat(),
+                );
+            }
+            if n == n_sprites {
+                break;
+            }
+        }
+
+        Frames {
+            state: 0,
+            states,
+            dims: sprite_dims,
+        }
+    }
+
+    pub fn from_files(paths: &[&str], dims: Vec2<u32>) -> Self {
         let mut states = Vec::new();
         for path in paths {
             let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
@@ -152,7 +192,6 @@ impl Frames {
             state: 0,
             dims,
             states,
-            flip: (false, false),
         }
     }
 }
@@ -164,15 +203,14 @@ impl Into<Drawable> for Frames {
 }
 
 pub struct Animation {
-    dims: (usize, usize),
+    dims: Vec2<u32>,
     state: usize,
     frame: usize,
     states: Vec<Vec<Mat<Color>>>,
-    flip: (bool, bool),
 }
 
 impl Animation {
-    pub fn from_files<T>(paths: &[&[T]], dims: (usize, usize)) -> Self
+    pub fn from_files<T>(paths: &[&[T]], dims: Vec2<u32>) -> Self
     where
         T: AsRef<Path>,
     {
@@ -199,7 +237,6 @@ impl Animation {
             state: 0,
             frame: 0,
             states,
-            flip: (false, false),
             dims,
         }
     }

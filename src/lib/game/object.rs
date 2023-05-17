@@ -1,68 +1,50 @@
-use super::grid::Grid;
+use crate::vec::Vec2;
 
-// TODO Find a way to make this less weird.
-
-pub struct Object<F>
-where
-    F: Fn(&Grid),
-{
-    pos: (usize, usize),
-    update: F,
+pub struct Object {
+    pos: Vec2<i32>,
+    dims: Vec2<i32>,
 }
 
-impl<F> Object<F>
-where
-    F: Fn(&Grid),
-{
-    pub fn draw(&self, grid: &mut Grid) {
-        (self.update)(grid);
+impl Object {
+    pub fn new<P, D>(pos: P, dims: D) -> Self
+    where
+        P: Into<Vec2<i32>>,
+        D: Into<Vec2<i32>>,
+    {
+        Object {
+            pos: pos.into(),
+            dims: dims.into(),
+        }
     }
 
-    pub fn pos(&self) -> &(usize, usize) {
+    pub fn colliding_with(&self, other: &Object) -> bool {
+        let (min1, max1, min2, max2) = (
+            self.pos,
+            (
+                self.pos.0 + self.dims.0 as i32 + 1,
+                self.pos.1 + self.dims.1 as i32 + 1,
+            ),
+            other.pos,
+            (
+                other.pos.0 + other.dims.0 as i32 + 1,
+                other.pos.1 + other.dims.1 as i32 + 1,
+            ),
+        );
+
+        !(max1.0 < min2.0 || min1.0 > max2.0 || max1.1 < min2.1 || min1.1 > max2.1)
+    }
+
+    pub fn pos(&self) -> &Vec2<i32> {
         &self.pos
     }
-    pub fn pos_mut(&mut self) -> &mut (usize, usize) {
+    pub fn pos_mut(&mut self) -> &mut Vec2<i32> {
         &mut self.pos
     }
-}
 
-pub struct ObjectBuilder<F>
-where
-    F: Fn(&Grid),
-{
-    pos: Option<(usize, usize)>,
-    update: Option<F>,
-}
-
-impl<F> ObjectBuilder<F>
-where
-    F: Fn(&Grid),
-{
-    pub fn new() -> Self {
-        ObjectBuilder {
-            pos: None,
-            update: None,
-        }
+    pub fn dims(&self) -> &Vec2<i32> {
+        &self.dims
     }
-
-    /// Define the position of the Object.
-    pub fn pos(mut self, pos: (usize, usize)) -> Self {
-        self.pos = Some(pos);
-        return self;
-    }
-    /// Define the object's update function.
-    pub fn update_fn(mut self, update_fn: F) -> Self {
-        self.update = Some(update_fn);
-        return self;
-    }
-
-    /// Build the Object.
-    pub fn build(self) -> Object<F> {
-        Object {
-            pos: self.pos.unwrap_or((0, 0)),
-            update: self.update.expect(
-                "Object should have an update function, define it with ObjectBuilder::update_fn(...).",
-            ),
-        }
+    pub fn dims_mut(&mut self) -> &mut Vec2<i32> {
+        &mut self.dims
     }
 }

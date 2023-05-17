@@ -1,22 +1,22 @@
 use crate::vec::Vec2;
 
 pub struct Physics {
-    s: Vec2<f32>,  // position in px
-    v: Vec2<f32>,  // velocity in px/s
-    a: Vec2<f32>,  // acceleration in px/s^2
-    m: f32,        // mass in mu (mass unit)
-    w: f32,        // weight in fu (force unit)
-    tf: Vec2<f32>, // total force in fu
+    pos: Vec2<f64>, // position in px
+    v: Vec2<f64>,   // velocity in px/s
+    a: Vec2<f64>,   // acceleration in px/s^2
+    m: f64,         // mass in mu (mass unit)
+    w: f64,         // weight in fu (force unit)
+    tf: Vec2<f64>,  // total force in fu
 }
 
 impl Physics {
-    pub fn new<S, V>(s0: S, v0: V, m: f32, g: f32) -> Self
+    pub fn new<S, V>(pos: S, v0: V, m: f64, g: f64) -> Self
     where
-        S: Into<Vec2<f32>>,
-        V: Into<Vec2<f32>>,
+        S: Into<Vec2<f64>>,
+        V: Into<Vec2<f64>>,
     {
         Self {
-            s: s0.into(),
+            pos: pos.into(),
             v: v0.into(),
             a: Vec2(0., 0.),
             tf: Vec2(0., 0.),
@@ -26,20 +26,20 @@ impl Physics {
     }
 
     /// Update positon, velocity and acceleration.
-    pub fn update(&mut self, dt: f32) {
+    pub fn update(&mut self, dt: f64) {
         let a = self.tf / self.m; // Newton's second law
         let v = self.a * dt;
         let s = self.v * dt + (self.a * dt.powi(2)) / 2.;
 
         self.a += a;
         self.v += v;
-        self.s += s;
+        self.pos += s;
     }
 
     /// Apply a new force on the object, updates the total force.
     pub fn apply_force<F>(&mut self, force: F)
     where
-        F: Into<Vec2<f32>>,
+        F: Into<Vec2<f64>>,
     {
         self.tf = self.tf + force.into();
     }
@@ -59,42 +59,43 @@ impl Physics {
     }
     pub fn set_v<V>(&mut self, v: V)
     where
-        V: Into<Vec2<f32>>,
+        V: Into<Vec2<f64>>,
     {
         self.v = v.into();
+        println!("{:?}", self.v);
     }
 
     /// The total force applied on the object, the weight is
     /// included.
-    pub fn tf(&self) -> &Vec2<f32> {
+    pub fn tf(&self) -> &Vec2<f64> {
         &self.tf
     }
-    pub fn tf_mut(&mut self) -> &mut Vec2<f32> {
+    pub fn tf_mut(&mut self) -> &mut Vec2<f64> {
         &mut self.tf
     }
     // Position of the object in px
-    pub fn s(&self) -> &Vec2<f32> {
-        &self.s
+    pub fn pos(&self) -> &Vec2<f64> {
+        &self.pos
     }
-    pub fn s_mut(&mut self) -> &mut Vec2<f32> {
-        &mut self.s
+    pub fn pos_mut(&mut self) -> &mut Vec2<f64> {
+        &mut self.pos
     }
     // Velocity of the object in px/s
-    pub fn v(&self) -> &Vec2<f32> {
+    pub fn v(&self) -> &Vec2<f64> {
         &self.v
     }
-    pub fn v_mut(&mut self) -> &mut Vec2<f32> {
+    pub fn v_mut(&mut self) -> &mut Vec2<f64> {
         &mut self.v
     }
     // Acceleration of the object in px/s^2
-    pub fn a(&self) -> &Vec2<f32> {
+    pub fn a(&self) -> &Vec2<f64> {
         &self.a
     }
-    pub fn a_mut(&mut self) -> &mut Vec2<f32> {
+    pub fn a_mut(&mut self) -> &mut Vec2<f64> {
         &mut self.a
     }
     // Weight of the object in fu (force unit)
-    pub fn w(&self) -> &f32 {
+    pub fn w(&self) -> &f64 {
         &self.w
     }
 }

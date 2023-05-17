@@ -1,13 +1,13 @@
-use crate::{color::Color, mat::Mat};
+use crate::{color::Color, mat::Mat, vec::Vec2};
 
 pub struct Grid {
     background_color: Color,
     mat: Mat<Color>,
-    dims: (usize, usize),
+    dims: Vec2<u32>,
 }
 
 impl Grid {
-    pub fn new(dims: (usize, usize), background_color: Option<Color>) -> Self {
+    pub fn new(dims: Vec2<u32>, background_color: Option<Color>) -> Self {
         let background_color = background_color.unwrap_or(Color::transparent());
         Grid {
             background_color,
@@ -16,14 +16,8 @@ impl Grid {
         }
     }
 
-    pub fn draw(&self, pixels: &mut [u8]) {
-        for (c, pix) in self.mat.iter().zip(pixels.chunks_exact_mut(4)) {
-            pix.copy_from_slice(&c.to_bytes());
-        }
-    }
-
-    pub fn clear_pixels(&mut self, last_pixels: &Vec<(usize, usize)>) {
-        for index in last_pixels {
+    pub fn clear_pixels(&mut self, pixels: &Vec<Vec2<u32>>) {
+        for index in pixels {
             self.mat[*index] = self.background_color;
         }
     }
@@ -37,7 +31,7 @@ impl Grid {
         &mut self.mat
     }
 
-    pub fn dims(&self) -> &(usize, usize) {
+    pub fn dims(&self) -> &Vec2<u32> {
         &self.dims
     }
 }
