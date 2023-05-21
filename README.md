@@ -1,10 +1,6 @@
 # Pixel Game
 
-A simple pixelated game made using an inefficient built-in helper ([take a look](./src/lib/), it's still interesting).
-
-## Todo
-
-- Rethink Drawable to be an external helper that can be used to ease the process of handling animation and stuff
+A simple and **inefficient** helper to build pixel art games.
 
 ## License
 
