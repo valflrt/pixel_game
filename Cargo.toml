@@ -1,6 +1,6 @@
 [package]
 name = "pixel_game"
-description = "A simple pixelated game made using an inefficient built-in helper"
+description = "A simple and inefficient helper to build pixel art games"
 version = "0.1.0"
 authors = ["valflrt"]
 edition = "2021"
