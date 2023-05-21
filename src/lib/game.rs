@@ -9,7 +9,7 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-use crate::{color::Color, game::grid::Grid, mat::MatSlice, vec::Vec2};
+use crate::{color::Color, game::grid::Grid, mat::MatSlice, vec2::Vec2};
 
 // TODO Split Game into two parts: update things and draw
 // things.
@@ -78,7 +78,7 @@ impl Game {
         let mut changed_pixels = Vec::new();
         for x in 0..image_dims.0 {
             for y in 0..image_dims.1 {
-                let index: Vec2<i32> = (pos.0 + x as i32, pos.1 + y as i32).into();
+                let index: Vec2<i32> = pos + (x, y).into();
                 let max_render_pos = (
                     self.render_pos.0 + self.render_dims.0 - 1,
                     self.render_pos.1 + self.render_dims.1 - 1,

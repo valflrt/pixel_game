@@ -7,6 +7,8 @@ use pixel_game_lib::{
     drawable::{Drawable, UniqueFrame},
     game::{object::Object, GameBuilder},
     physics::Physics,
+    shape::Shape,
+    vec2::Vec2,
 };
 use winit::event::VirtualKeyCode;
 
@@ -26,9 +28,9 @@ fn main() {
         .background_color(BG_COLOR)
         .build();
 
-    let mut object = Object::new((0, 0), (1, 1));
+    let mut object = Object::new((WIDTH / 2, 10), Shape::Rect(Vec2(2, 2)));
 
-    let mut physics = Physics::new((10., 96.), (0., 0.), 60., 9.81);
+    let mut physics = Physics::new(*object.pos(), (0., 0.), 60., 9.81);
 
     let mut animation: Drawable = UniqueFrame::from_color(Color::white(), (1, 1)).into();
     let image = animation.next().unwrap();
@@ -38,21 +40,39 @@ fn main() {
     let total_time = time::Instant::now();
     let mut timer = total_time.clone();
 
-    game.run(move |game| {
-        // Stops the object to prevent it from going berserk
-        // but you can try it by commenting this piece of code.
-        // if object.pos().1 >= 100 && physics.v().1.is_sign_positive() {
-        //     physics.reset_all();
-        // } else {
-        //     physics.set_tf_to_w();
-        // }
+    let mut forces_applied = (false, false, false);
 
+    let w = physics.w();
+
+    game.run(move |game| {
         if game.input().key_held(VirtualKeyCode::Left) {
-            physics.apply_force((-200., 0.));
-        } else if game.input().key_held(VirtualKeyCode::Up) {
-            physics.apply_force((0., -200.));
-        } else if game.input().key_held(VirtualKeyCode::Right) {
-            physics.apply_force((200., 0.));
+            if !forces_applied.0 {
+                physics.apply_force((-2000., 0.));
+                forces_applied.0 = true;
+            }
+        } else if forces_applied.0 {
+            physics.apply_force((2000., 0.));
+            forces_applied.0 = false;
+        }
+
+        if game.input().key_held(VirtualKeyCode::Right) {
+            if !forces_applied.1 {
+                physics.apply_force((2000., 0.));
+                forces_applied.1 = true;
+            }
+        } else if forces_applied.1 {
+            physics.apply_force((-2000., 0.));
+            forces_applied.1 = false;
+        }
+
+        if game.input().key_held(VirtualKeyCode::Up) {
+            if !forces_applied.2 {
+                physics.apply_force((0., -w - 6000.));
+                forces_applied.2 = true;
+            }
+        } else if forces_applied.2 {
+            physics.apply_force((0., w + 6000.));
+            forces_applied.2 = false;
         }
 
         let t = timer.elapsed().as_secs_f64();
@@ -64,11 +84,10 @@ fn main() {
         println!("t = {}s", total_time.elapsed().as_secs_f32());
         println!("v = {:?}", physics.v());
         println!("a = {:?}", physics.a());
+        println!("tf = {:?}", physics.tf());
 
         game.clear(Color::new(0, 0, 0, 0));
         game.image_at(*object.pos(), &image.as_slice());
-
-        physics.set_tf_to_w();
 
         timer = time::Instant::now();
     });

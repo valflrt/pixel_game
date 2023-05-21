@@ -1,37 +1,55 @@
-use crate::vec::Vec2;
+use crate::{
+    shape::{Boundaries, Shape},
+    vec2::Vec2,
+};
 
+#[derive(Debug, Clone)]
 pub struct Object {
     pos: Vec2<i32>,
-    dims: Vec2<i32>,
+    shape: Shape,
 }
 
 impl Object {
-    pub fn new<P, D>(pos: P, dims: D) -> Self
+    pub fn new<P>(pos: P, shape: Shape) -> Self
     where
         P: Into<Vec2<i32>>,
-        D: Into<Vec2<i32>>,
     {
         Object {
             pos: pos.into(),
-            dims: dims.into(),
+            shape,
         }
     }
 
-    pub fn colliding_with(&self, other: &Object) -> bool {
-        let (min1, max1, min2, max2) = (
-            self.pos,
-            (
-                self.pos.0 + self.dims.0 as i32 + 1,
-                self.pos.1 + self.dims.1 as i32 + 1,
-            ),
-            other.pos,
-            (
-                other.pos.0 + other.dims.0 as i32 + 1,
-                other.pos.1 + other.dims.1 as i32 + 1,
-            ),
-        );
+    pub fn in_contact_with(&self, other: &Self) -> bool {
+        let b1 = self.raw_boundaries();
+        let b2 = other.raw_boundaries();
 
-        !(max1.0 < min2.0 || min1.0 > max2.0 || max1.1 < min2.1 || min1.1 > max2.1)
+        b1.right >= b2.left && b1.left <= b2.right && b1.bottom >= b2.top && b1.top <= b2.bottom
+    }
+
+    pub fn in_contact_with_any(&self, others: &[&Self]) -> bool {
+        others.iter().any(|other| {
+            let b1 = self.raw_boundaries();
+            let b2 = other.raw_boundaries();
+
+            b1.right >= b2.left && b1.left <= b2.right && b1.bottom >= b2.top && b1.top <= b2.bottom
+        })
+    }
+
+    pub fn raw_dims(&self) -> Vec2<i32> {
+        match &self.shape {
+            Shape::Rect(dims) => *dims,
+        }
+    }
+
+    pub fn raw_boundaries(&self) -> Boundaries {
+        let dims = self.raw_dims();
+        Boundaries {
+            left: self.pos.0,
+            top: self.pos.1,
+            right: self.pos.0 + dims.0 + 1,
+            bottom: self.pos.1 + dims.1 + 1,
+        }
     }
 
     pub fn pos(&self) -> &Vec2<i32> {
@@ -41,10 +59,7 @@ impl Object {
         &mut self.pos
     }
 
-    pub fn dims(&self) -> &Vec2<i32> {
-        &self.dims
-    }
-    pub fn dims_mut(&mut self) -> &mut Vec2<i32> {
-        &mut self.dims
+    pub fn shape(&self) -> &Shape {
+        &self.shape
     }
 }

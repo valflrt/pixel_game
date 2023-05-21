@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{color::Color, mat::Mat, vec::Vec2};
+use crate::{color::Color, mat::Mat, vec2::Vec2};
 
 pub enum Drawable {
     UniqueFrame(UniqueFrame),
@@ -9,14 +9,14 @@ pub enum Drawable {
 }
 
 impl Drawable {
-    pub fn dims(&self) -> &Vec2<u32> {
+    pub fn dims(&self) -> &Vec2<i32> {
         match self {
             Drawable::UniqueFrame(display) => &display.dims,
             Drawable::Frames(display) => &display.dims,
             Drawable::Animation(display) => &display.dims,
         }
     }
-    pub fn dims_mut(&mut self) -> &mut Vec2<u32> {
+    pub fn dims_mut(&mut self) -> &mut Vec2<i32> {
         match self {
             Drawable::UniqueFrame(display) => &mut display.dims,
             Drawable::Frames(display) => &mut display.dims,
@@ -63,12 +63,12 @@ impl Iterator for Drawable {
 }
 
 pub struct UniqueFrame {
-    dims: Vec2<u32>,
+    dims: Vec2<i32>,
     state: Mat<Color>,
 }
 
 impl UniqueFrame {
-    pub fn from_files(path: &str, dims: Vec2<u32>) -> Self {
+    pub fn from_files(path: &str, dims: Vec2<i32>) -> Self {
         let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
             image::open(path).unwrap().to_rgba8();
 
@@ -92,7 +92,7 @@ impl UniqueFrame {
 
     pub fn from_color<D>(color: Color, dims: D) -> Self
     where
-        D: Into<Vec2<u32>>,
+        D: Into<Vec2<i32>>,
     {
         let dims = dims.into();
         UniqueFrame {
@@ -109,7 +109,7 @@ impl Into<Drawable> for UniqueFrame {
 }
 
 pub struct Frames {
-    dims: Vec2<u32>,
+    dims: Vec2<i32>,
     state: usize,
     states: Vec<Mat<Color>>,
 }
@@ -117,8 +117,8 @@ pub struct Frames {
 impl Frames {
     pub fn from_spritesheet<T>(
         path: T,
-        sprite_dims: Vec2<u32>,
-        spritesheet_dims: Vec2<u32>,
+        sprite_dims: Vec2<i32>,
+        spritesheet_dims: Vec2<i32>,
         n_sprites: usize,
     ) -> Self
     where
@@ -169,7 +169,7 @@ impl Frames {
         }
     }
 
-    pub fn from_files(paths: &[&str], dims: Vec2<u32>) -> Self {
+    pub fn from_files(paths: &[&str], dims: Vec2<i32>) -> Self {
         let mut states = Vec::new();
         for path in paths {
             let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
@@ -203,14 +203,14 @@ impl Into<Drawable> for Frames {
 }
 
 pub struct Animation {
-    dims: Vec2<u32>,
+    dims: Vec2<i32>,
     state: usize,
     frame: usize,
     states: Vec<Vec<Mat<Color>>>,
 }
 
 impl Animation {
-    pub fn from_files<T>(paths: &[&[T]], dims: Vec2<u32>) -> Self
+    pub fn from_files<T>(paths: &[&[T]], dims: Vec2<i32>) -> Self
     where
         T: AsRef<Path>,
     {

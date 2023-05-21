@@ -3,9 +3,9 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::vec::Vec2;
+use crate::vec2::Vec2;
 
-fn dims_product(dims: Vec2<u32>) -> usize {
+fn dims_product(dims: Vec2<usize>) -> usize {
     dims.0
         .checked_mul(dims.1)
         .expect("Mat dimensions are too big so their product is out of bounds")
@@ -13,7 +13,7 @@ fn dims_product(dims: Vec2<u32>) -> usize {
         .unwrap()
 }
 
-fn get_vec_index(index: Vec2<u32>, width: u32) -> usize {
+fn get_vec_index(index: Vec2<usize>, width: usize) -> usize {
     (index.1 * width + index.0).try_into().unwrap()
 }
 
@@ -21,7 +21,7 @@ fn get_vec_index(index: Vec2<u32>, width: u32) -> usize {
 #[derive(Debug, Clone)]
 pub struct Mat<T> {
     vec: Vec<T>,
-    dims: Vec2<u32>,
+    dims: Vec2<usize>,
 }
 
 impl<T> Mat<T> {
@@ -29,7 +29,7 @@ impl<T> Mat<T> {
     pub fn filled_with<D>(default_value: T, dims: D) -> Self
     where
         T: Clone,
-        D: Into<Vec2<u32>>,
+        D: Into<Vec2<usize>>,
     {
         let dims = dims.into();
         Mat {
@@ -44,7 +44,7 @@ impl<T> Mat<T> {
     where
         T: Clone,
         V: Into<Vec<T>>,
-        D: Into<Vec2<u32>>,
+        D: Into<Vec2<usize>>,
     {
         let dims = dims.into();
         let vec = vec.into();
@@ -64,7 +64,7 @@ impl<T> Mat<T> {
     /// provided closure.
     pub fn fill_with_r<F>(&mut self, mut f: F)
     where
-        F: FnMut(Vec2<u32>) -> T,
+        F: FnMut(Vec2<usize>) -> T,
     {
         for y in 0..self.dims.1 {
             for x in 0..self.dims.0 {
@@ -77,7 +77,7 @@ impl<T> Mat<T> {
     /// provided closure.
     pub fn fill_with_c<F>(&mut self, mut f: F)
     where
-        F: FnMut(Vec2<u32>) -> T,
+        F: FnMut(Vec2<usize>) -> T,
     {
         for x in 0..self.dims.0 {
             for y in 0..self.dims.1 {
@@ -89,8 +89,8 @@ impl<T> Mat<T> {
     /// Swap two items with indexes `a` and `b`.
     pub fn swap<A, B>(&mut self, a: A, b: B)
     where
-        A: Into<Vec2<u32>>,
-        B: Into<Vec2<u32>>,
+        A: Into<Vec2<usize>>,
+        B: Into<Vec2<usize>>,
     {
         let a = self.get_vec_index(a.into());
         let b = self.get_vec_index(b.into());
@@ -148,8 +148,8 @@ impl<T> Mat<T> {
     pub fn slice<'a, I, D>(&'a self, index: I, dims: D, flip: (bool, bool)) -> MatSlice<'a, T>
     where
         T: Clone,
-        I: Into<Vec2<u32>>,
-        D: Into<Vec2<u32>>,
+        I: Into<Vec2<usize>>,
+        D: Into<Vec2<usize>>,
     {
         let index = index.into();
         let dims = dims.into();
@@ -168,7 +168,7 @@ impl<T> Mat<T> {
 
     pub fn has<I>(&self, index: I) -> bool
     where
-        I: Into<Vec2<u32>>,
+        I: Into<Vec2<usize>>,
     {
         let index = index.into();
         index.0 < self.dims.0 && index.1 < self.dims.1
@@ -212,18 +212,18 @@ impl<T> Mat<T> {
     }
 
     /// The dimensions of the Mat (x and y).
-    pub fn dims(&self) -> &Vec2<u32> {
+    pub fn dims(&self) -> &Vec2<usize> {
         &self.dims
     }
 
-    fn get_vec_index(&self, index: Vec2<u32>) -> usize {
+    fn get_vec_index(&self, index: Vec2<usize>) -> usize {
         get_vec_index(index, self.dims.0)
     }
 }
 
 impl<T, I> Index<I> for Mat<T>
 where
-    I: Into<Vec2<u32>>,
+    I: Into<Vec2<usize>>,
 {
     type Output = T;
 
@@ -235,7 +235,7 @@ where
 
 impl<T, I> IndexMut<I> for Mat<T>
 where
-    I: Into<Vec2<u32>>,
+    I: Into<Vec2<usize>>,
 {
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         let index = self.get_vec_index(index.into());
@@ -264,8 +264,8 @@ where
 #[derive(Debug, Clone, Copy)]
 pub struct MatSlice<'a, T> {
     mat: &'a Mat<T>,
-    index: Vec2<u32>,
-    dims: Vec2<u32>,
+    index: Vec2<usize>,
+    dims: Vec2<usize>,
     flip: (bool, bool),
 }
 
@@ -284,7 +284,6 @@ impl<'a, T> MatSlice<'a, T> {
 
         for (x, u) in (self.index.0..=b.0).enumerate() {
             for (y, v) in (self.index.1..=b.1).enumerate() {
-                let (x, y) = (x as u32, y as u32);
                 let index = Vec2(
                     if !self.flip.0 { x } else { self.dims.0 - 1 - x },
                     if !self.flip.1 { y } else { self.dims.1 - 1 - y },
@@ -301,8 +300,8 @@ impl<'a, T> MatSlice<'a, T> {
     pub fn slice<I, D>(&'a self, index: I, dims: D, flip: (bool, bool)) -> MatSlice<'a, T>
     where
         T: Clone,
-        I: Into<Vec2<u32>>,
-        D: Into<Vec2<u32>>,
+        I: Into<Vec2<usize>>,
+        D: Into<Vec2<usize>>,
     {
         let index = index.into();
         let dims = dims.into();
@@ -320,14 +319,14 @@ impl<'a, T> MatSlice<'a, T> {
         }
     }
 
-    pub fn dims(&self) -> &Vec2<u32> {
+    pub fn dims(&self) -> &Vec2<usize> {
         &self.dims
     }
 }
 
 impl<'a, T, I> Index<I> for MatSlice<'a, T>
 where
-    I: Into<Vec2<u32>>,
+    I: Into<Vec2<usize>>,
 {
     type Output = T;
     fn index(&self, index: I) -> &Self::Output {

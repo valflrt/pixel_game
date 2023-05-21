@@ -67,6 +67,12 @@ where
     }
 }
 
+impl<T: Default> Default for Vec2<T> {
+    fn default() -> Self {
+        Vec2(T::default(), T::default())
+    }
+}
+
 impl<T> Into<Vec2<T>> for (T, T) {
     fn into(self) -> Vec2<T> {
         Vec2(self.0, self.1)
@@ -83,36 +89,51 @@ impl Into<Vec2<i32>> for Vec2<f64> {
         Vec2(self.0.floor() as i32, self.1.floor() as i32)
     }
 }
+impl Into<Vec2<i32>> for (f64, f64) {
+    fn into(self) -> Vec2<i32> {
+        Vec2(self.0.floor() as i32, self.1.floor() as i32)
+    }
+}
 impl Into<Vec2<f64>> for Vec2<i32> {
     fn into(self) -> Vec2<f64> {
         Vec2(self.0 as f64, self.1 as f64)
     }
 }
-
-impl Into<Vec2<u32>> for Vec2<f64> {
-    fn into(self) -> Vec2<u32> {
-        Vec2(self.0.floor().abs() as u32, self.1.floor().abs() as u32)
+impl Into<Vec2<f64>> for (i32, i32) {
+    fn into(self) -> Vec2<f64> {
+        Vec2(self.0 as f64, self.1 as f64)
     }
 }
 
-impl Into<Vec2<i32>> for Vec2<u32> {
-    fn into(self) -> Vec2<i32> {
-        Vec2(self.0 as i32, self.1 as i32)
-    }
-}
-impl Into<Vec2<u32>> for Vec2<i32> {
-    fn into(self) -> Vec2<u32> {
-        Vec2(self.0 as u32, self.1 as u32)
-    }
-}
-
-impl Into<Vec2<usize>> for Vec2<u32> {
+impl Into<Vec2<usize>> for Vec2<i32> {
     fn into(self) -> Vec2<usize> {
-        Vec2(self.0 as usize, self.1 as usize)
+        Vec2(
+            self.0.try_into().expect("Failed to convert i32 to usize."),
+            self.1.try_into().expect("Failed to convert i32 to usize."),
+        )
     }
 }
-impl Into<Vec2<u32>> for Vec2<usize> {
-    fn into(self) -> Vec2<u32> {
-        Vec2(self.0 as u32, self.1 as u32)
+impl Into<Vec2<usize>> for (i32, i32) {
+    fn into(self) -> Vec2<usize> {
+        Vec2(
+            self.0.try_into().expect("Failed to convert i32 to usize."),
+            self.1.try_into().expect("Failed to convert i32 to usize."),
+        )
+    }
+}
+impl Into<Vec2<i32>> for Vec2<usize> {
+    fn into(self) -> Vec2<i32> {
+        Vec2(
+            self.0.try_into().expect("Failed to convert usize to i32."),
+            self.1.try_into().expect("Failed to convert usize to i32."),
+        )
+    }
+}
+impl Into<Vec2<i32>> for (usize, usize) {
+    fn into(self) -> Vec2<i32> {
+        Vec2(
+            self.0.try_into().expect("Failed to convert usize to i32."),
+            self.1.try_into().expect("Failed to convert usize to i32."),
+        )
     }
 }
