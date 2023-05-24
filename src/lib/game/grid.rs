@@ -8,7 +8,7 @@ pub struct Grid {
 
 impl Grid {
     pub fn new(dims: Vec2<i32>, background_color: Option<Color>) -> Self {
-        let background_color = background_color.unwrap_or(Color::transparent());
+        let background_color = background_color.unwrap_or(Color::TRANSPARENT);
         Grid {
             background_color,
             mat: Mat::filled_with(background_color, dims),

@@ -32,7 +32,7 @@ fn main() {
 
     let mut physics = Physics::new(*object.pos(), (0., 0.), 60., 9.81);
 
-    let mut animation: Drawable = UniqueFrame::from_color(Color::white(), (1, 1)).into();
+    let mut animation: Drawable = UniqueFrame::from_color(Color::WHITE, (1, 1)).into();
     let image = animation.next().unwrap();
 
     physics.set_tf_to_w();

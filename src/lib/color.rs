@@ -7,6 +7,43 @@ pub struct Color {
 }
 
 impl Color {
+    pub const RED: Color = Color {
+        r: 255,
+        g: 0,
+        b: 0,
+        a: 255,
+    };
+    pub const GREEN: Color = Color {
+        r: 0,
+        g: 255,
+        b: 0,
+        a: 255,
+    };
+    pub const BLUE: Color = Color {
+        r: 0,
+        g: 0,
+        b: 255,
+        a: 255,
+    };
+    pub const BLACK: Color = Color {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 255,
+    };
+    pub const WHITE: Color = Color {
+        r: 255,
+        g: 255,
+        b: 255,
+        a: 255,
+    };
+    pub const TRANSPARENT: Color = Color {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 0,
+    };
+
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Color { r, g, b, a }
     }
@@ -22,54 +59,5 @@ impl Color {
 
     pub fn to_bytes(&self) -> [u8; 4] {
         [self.r, self.g, self.b, self.a]
-    }
-
-    pub const fn red() -> Self {
-        Color {
-            r: 255,
-            g: 0,
-            b: 0,
-            a: 255,
-        }
-    }
-    pub const fn green() -> Self {
-        Color {
-            r: 0,
-            g: 255,
-            b: 0,
-            a: 255,
-        }
-    }
-    pub const fn blue() -> Self {
-        Color {
-            r: 0,
-            g: 0,
-            b: 255,
-            a: 255,
-        }
-    }
-    pub const fn black() -> Self {
-        Color {
-            r: 0,
-            g: 0,
-            b: 0,
-            a: 255,
-        }
-    }
-    pub const fn white() -> Self {
-        Color {
-            r: 255,
-            g: 255,
-            b: 255,
-            a: 255,
-        }
-    }
-    pub const fn transparent() -> Self {
-        Color {
-            r: 0,
-            g: 0,
-            b: 0,
-            a: 0,
-        }
     }
 }
