@@ -1,6 +1,8 @@
-use std::path::Path;
-
-use crate::{color::Color, mat::Mat, vec2::Vec2};
+use crate::{
+    color::Color,
+    mat::Mat,
+    resources::{import_sprites, import_spritesheet},
+};
 
 pub enum Drawable {
     UniqueFrame(UniqueFrame),
@@ -9,14 +11,14 @@ pub enum Drawable {
 }
 
 impl Drawable {
-    pub fn dims(&self) -> &Vec2<i32> {
+    pub fn dims(&self) -> &(usize, usize) {
         match self {
             Drawable::UniqueFrame(display) => &display.dims,
             Drawable::Frames(display) => &display.dims,
             Drawable::Animation(display) => &display.dims,
         }
     }
-    pub fn dims_mut(&mut self) -> &mut Vec2<i32> {
+    pub fn dims_mut(&mut self) -> &mut (usize, usize) {
         match self {
             Drawable::UniqueFrame(display) => &mut display.dims,
             Drawable::Frames(display) => &mut display.dims,
@@ -63,12 +65,12 @@ impl Iterator for Drawable {
 }
 
 pub struct UniqueFrame {
-    dims: Vec2<i32>,
+    dims: (usize, usize),
     state: Mat<Color>,
 }
 
 impl UniqueFrame {
-    pub fn from_files(path: &str, dims: Vec2<i32>) -> Self {
+    pub fn from_file(path: &str, dims: (usize, usize)) -> Self {
         let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
             image::open(path).unwrap().to_rgba8();
 
@@ -85,19 +87,16 @@ impl UniqueFrame {
                         a: v[3],
                     })
                     .collect::<Vec<_>>(),
-                dims,
+                dims.into(),
             ),
         }
     }
 
-    pub fn from_color<D>(color: Color, dims: D) -> Self
-    where
-        D: Into<Vec2<i32>>,
-    {
+    pub fn from_color(color: Color, dims: (usize, usize)) -> Self {
         let dims = dims.into();
         UniqueFrame {
             dims,
-            state: Mat::filled_with(color, dims),
+            state: Mat::filled_with(color, dims.into()),
         }
     }
 }
@@ -109,89 +108,30 @@ impl Into<Drawable> for UniqueFrame {
 }
 
 pub struct Frames {
-    dims: Vec2<i32>,
+    dims: (usize, usize),
     state: usize,
     states: Vec<Mat<Color>>,
 }
 
 impl Frames {
-    pub fn from_spritesheet<T>(
-        path: T,
-        sprite_dims: Vec2<i32>,
-        spritesheet_dims: Vec2<i32>,
+    pub fn from_spritesheet(
+        path: &str,
+        sprite_dims: (usize, usize),
+        spritesheet_dims: (usize, usize),
         n_sprites: usize,
-    ) -> Self
-    where
-        T: AsRef<Path>,
-    {
-        let image = image::open(path).unwrap().to_rgba8();
-        let image_pixels: Vec<Color> = image
-            .as_raw()
-            .chunks(4)
-            .map(|v| Color {
-                r: v[0],
-                g: v[1],
-                b: v[2],
-                a: v[3],
-            })
-            .collect();
-        let image_dims = (
-            sprite_dims.0 * spritesheet_dims.0,
-            sprite_dims.1 * spritesheet_dims.1,
-        );
-        let image_mat = Mat::from_vec(image_pixels, image_dims);
-
-        let mut states = Vec::new();
-
-        let mut n: usize = 0;
-        for v in 0..image_dims.1 {
-            for u in 0..image_dims.0 {
-                if n == n_sprites {
-                    break;
-                } else {
-                    n += 1;
-                }
-                states.push(
-                    image_mat
-                        .slice((u, v), sprite_dims, (false, false))
-                        .to_mat(),
-                );
-            }
-            if n == n_sprites {
-                break;
-            }
-        }
-
+    ) -> Self {
         Frames {
             state: 0,
-            states,
+            states: import_spritesheet(path, sprite_dims, spritesheet_dims, n_sprites),
             dims: sprite_dims,
         }
     }
 
-    pub fn from_files(paths: &[&str], dims: Vec2<i32>) -> Self {
-        let mut states = Vec::new();
-        for path in paths {
-            let image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
-                image::open(path).unwrap().to_rgba8();
-            states.push(Mat::from_vec(
-                image
-                    .as_raw()
-                    .chunks(4)
-                    .map(|v| Color {
-                        r: v[0],
-                        g: v[1],
-                        b: v[2],
-                        a: v[3],
-                    })
-                    .collect::<Vec<_>>(),
-                dims,
-            ));
-        }
+    pub fn from_files(paths: &[&str], dims: (usize, usize)) -> Self {
         Frames {
             state: 0,
             dims,
-            states,
+            states: import_sprites(paths, dims),
         }
     }
 }
@@ -203,35 +143,17 @@ impl Into<Drawable> for Frames {
 }
 
 pub struct Animation {
-    dims: Vec2<i32>,
+    dims: (usize, usize),
     state: usize,
     frame: usize,
     states: Vec<Vec<Mat<Color>>>,
 }
 
 impl Animation {
-    pub fn from_files<T>(paths: &[&[T]], dims: Vec2<i32>) -> Self
-    where
-        T: AsRef<Path>,
-    {
+    pub fn from_files(paths: &[&[&str]], dims: (usize, usize)) -> Self {
         let mut states = Vec::new();
         for frames_paths in paths {
-            let mut frames = Vec::new();
-            for path in *frames_paths {
-                let image = image::open(path).unwrap().to_rgba8();
-                let image_pixels: Vec<Color> = image
-                    .as_raw()
-                    .chunks(4)
-                    .map(|v| Color {
-                        r: v[0],
-                        g: v[1],
-                        b: v[2],
-                        a: v[3],
-                    })
-                    .collect();
-                frames.push(Mat::from_vec(image_pixels, dims));
-            }
-            states.push(frames)
+            states.push(import_sprites(frames_paths, dims));
         }
         Animation {
             state: 0,
@@ -247,5 +169,3 @@ impl Into<Drawable> for Animation {
         Drawable::Animation(self)
     }
 }
-
-// TODO Add TexturedAnimation

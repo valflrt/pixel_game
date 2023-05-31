@@ -5,15 +5,12 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Object {
-    pos: Vec2<i32>,
+    pos: Vec2,
     shape: Shape,
 }
 
 impl Object {
-    pub fn new<P>(pos: P, shape: Shape) -> Self
-    where
-        P: Into<Vec2<i32>>,
-    {
+    pub fn new(pos: Vec2, shape: Shape) -> Self {
         Object {
             pos: pos.into(),
             shape,
@@ -36,7 +33,7 @@ impl Object {
         })
     }
 
-    pub fn raw_dims(&self) -> Vec2<i32> {
+    pub fn raw_dims(&self) -> Vec2 {
         match &self.shape {
             Shape::Rect(dims) => *dims,
         }
@@ -47,15 +44,15 @@ impl Object {
         Boundaries {
             left: self.pos.0,
             top: self.pos.1,
-            right: self.pos.0 + dims.0 + 1,
-            bottom: self.pos.1 + dims.1 + 1,
+            right: self.pos.0 + dims.0 + 1.,
+            bottom: self.pos.1 + dims.1 + 1.,
         }
     }
 
-    pub fn pos(&self) -> &Vec2<i32> {
+    pub fn pos(&self) -> &Vec2 {
         &self.pos
     }
-    pub fn pos_mut(&mut self) -> &mut Vec2<i32> {
+    pub fn pos_mut(&mut self) -> &mut Vec2 {
         &mut self.pos
     }
 

@@ -1,5 +1,4 @@
 pub mod grid;
-pub mod object;
 
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
@@ -15,9 +14,9 @@ use crate::{color::Color, game::grid::Grid, mat::MatSlice, vec2::Vec2};
 // things.
 
 pub struct Game {
-    dims: Vec2<i32>,
-    render_pos: Vec2<i32>,
-    render_dims: Vec2<i32>,
+    dims: Vec2,
+    render_pos: Vec2,
+    render_dims: Vec2,
     title: String,
 
     grid: Grid,
@@ -30,15 +29,15 @@ impl Game {
     where
         U: FnMut(&mut Game) + 'static,
     {
-        let (width, height) = self.render_dims.into();
+        let Vec2(width, height) = self.render_dims;
 
         let event_loop = EventLoop::new();
 
         println!("{:?}", self.render_dims);
 
         let window = {
-            let size = LogicalSize::new(width as f64, height as f64);
-            let scaled_size = LogicalSize::new(width as f64 * 5.0, height as f64 * 5.0);
+            let size = LogicalSize::new(width, height);
+            let scaled_size = LogicalSize::new(width * 5.0, height * 5.0);
             WindowBuilder::new()
                 .with_title(self.title.clone())
                 .with_inner_size(scaled_size)
@@ -72,26 +71,26 @@ impl Game {
         });
     }
 
-    pub fn image_at(&mut self, pos: Vec2<i32>, image: &MatSlice<Color>) -> Vec<Vec2<i32>> {
+    pub fn image_at(&mut self, pos: Vec2, image: &MatSlice<Color>) -> Vec<Vec2> {
         let image_dims = image.dims();
 
         let mut changed_pixels = Vec::new();
         for x in 0..image_dims.0 {
             for y in 0..image_dims.1 {
-                let index: Vec2<i32> = pos + (x, y).into();
-                let max_render_pos = (
-                    self.render_pos.0 + self.render_dims.0 - 1,
-                    self.render_pos.1 + self.render_dims.1 - 1,
+                let index: Vec2 = pos + Vec2::from_usize(x, y);
+                let max_render_pos = Vec2(
+                    self.render_pos.0 + self.render_dims.0 - 1.,
+                    self.render_pos.1 + self.render_dims.1 - 1.,
                 );
 
-                if 0 <= index.0
-                    && 0 <= index.1
+                if 0. <= index.0
+                    && 0. <= index.1
                     && index.0 <= max_render_pos.0
                     && index.1 <= max_render_pos.1
                 {
                     let pixel = image[(x, y)];
-                    if pixel.a == 255 && self.grid.mat().has(index) {
-                        self.grid.mat_mut()[index] = pixel;
+                    if pixel.a == 255 && self.grid.mat().has(index.to_usize()) {
+                        self.grid.mat_mut()[index.to_usize()] = pixel;
                         changed_pixels.push(index);
                     }
                 }
@@ -101,7 +100,7 @@ impl Game {
     }
 
     pub fn clear(&mut self, color: Color) {
-        let dims = *self.grid.dims();
+        let dims = self.grid.dims().to_usize();
         for x in 0..dims.0 {
             for y in 0..dims.1 {
                 self.grid.mat_mut()[(x, y)] = color;
@@ -109,14 +108,14 @@ impl Game {
         }
     }
 
-    pub fn dims(&self) -> &Vec2<i32> {
+    pub fn dims(&self) -> &Vec2 {
         &self.dims
     }
 
-    pub fn pos(&self) -> &Vec2<i32> {
+    pub fn pos(&self) -> &Vec2 {
         &self.render_pos
     }
-    pub fn pos_mut(&mut self) -> &mut Vec2<i32> {
+    pub fn pos_mut(&mut self) -> &mut Vec2 {
         &mut self.render_pos
     }
 
@@ -128,7 +127,11 @@ impl Game {
         for (c, pix) in self
             .grid
             .mat()
-            .slice(self.render_pos, self.render_dims, (false, false))
+            .slice(
+                self.render_pos.to_usize(),
+                self.render_dims.to_usize(),
+                (false, false),
+            )
             .to_mat()
             .iter()
             .zip(pixels.chunks_exact_mut(4))
@@ -139,9 +142,9 @@ impl Game {
 }
 
 pub struct GameBuilder {
-    dims: Option<Vec2<i32>>,
-    render_dims: Option<Vec2<i32>>,
-    render_pos: Option<Vec2<i32>>,
+    dims: Option<Vec2>,
+    render_dims: Option<Vec2>,
+    render_pos: Option<Vec2>,
     title: Option<String>,
     background_color: Option<Color>,
 }
@@ -157,24 +160,15 @@ impl GameBuilder {
         }
     }
 
-    pub fn dims<D>(mut self, dims: D) -> Self
-    where
-        D: Into<Vec2<i32>>,
-    {
+    pub fn dims(mut self, dims: Vec2) -> Self {
         self.dims = Some(dims.into());
         self
     }
-    pub fn render_pos<P>(mut self, render_pos: P) -> Self
-    where
-        P: Into<Vec2<i32>>,
-    {
+    pub fn render_pos(mut self, render_pos: Vec2) -> Self {
         self.render_pos = Some(render_pos.into());
         self
     }
-    pub fn render_dims<D>(mut self, render_dims: D) -> Self
-    where
-        D: Into<Vec2<i32>>,
-    {
+    pub fn render_dims(mut self, render_dims: Vec2) -> Self {
         self.render_dims = Some(render_dims.into());
         self
     }
@@ -192,7 +186,7 @@ impl GameBuilder {
             dims,
 
             render_dims: self.render_dims.unwrap_or(dims),
-            render_pos: self.render_pos.unwrap_or((0, 0).into()),
+            render_pos: self.render_pos.unwrap_or(Vec2::ZERO),
 
             title: self.title.unwrap_or("Game".to_string()),
 

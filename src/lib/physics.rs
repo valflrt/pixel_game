@@ -4,24 +4,20 @@ pub struct Physics {
     m: f64, // mass in mu (mass unit)
     g: f64, // gravity strength in fu/mu
 
-    pos: Vec2<f64>, // position in px
-    v: Vec2<f64>,   // velocity in px/s
-    a: Vec2<f64>,   // acceleration in px/s^2
+    pos: Vec2, // position in px
+    v: Vec2,   // velocity in px/s
+    a: Vec2,   // acceleration in px/s^2
 
-    tf: Vec2<f64>, // total force in fu (force unit)
+    tf: Vec2, // total force in fu (force unit)
 }
 
 impl Physics {
-    pub fn new<S, V>(pos: S, v: V, m: f64, g: f64) -> Self
-    where
-        S: Into<Vec2<f64>>,
-        V: Into<Vec2<f64>>,
-    {
+    pub fn new(pos: Vec2, v: Vec2, m: f64, g: f64) -> Self {
         Self {
             pos: pos.into(),
             v: v.into(),
-            a: Vec2::default(),
-            tf: Vec2::default(),
+            a: Vec2::ZERO,
+            tf: Vec2::ZERO,
             m,
             g: g * 10.,
         }
@@ -36,10 +32,7 @@ impl Physics {
     }
 
     /// Apply a new force on the object, updates the total force.
-    pub fn apply_force<F>(&mut self, force: F)
-    where
-        F: Into<Vec2<f64>>,
-    {
+    pub fn apply_force(&mut self, force: Vec2) {
         self.tf += force.into();
     }
     /// Set the total force to the weight of the object.
@@ -59,31 +52,31 @@ impl Physics {
 
     /// The total force applied on the object, the weight is
     /// included.
-    pub fn tf(&self) -> &Vec2<f64> {
+    pub fn tf(&self) -> &Vec2 {
         &self.tf
     }
-    pub fn tf_mut(&mut self) -> &mut Vec2<f64> {
+    pub fn tf_mut(&mut self) -> &mut Vec2 {
         &mut self.tf
     }
     /// Position of the object in px
-    pub fn pos(&self) -> &Vec2<f64> {
+    pub fn pos(&self) -> &Vec2 {
         &self.pos
     }
-    pub fn pos_mut(&mut self) -> &mut Vec2<f64> {
+    pub fn pos_mut(&mut self) -> &mut Vec2 {
         &mut self.pos
     }
     /// Velocity of the object in px/s
-    pub fn v(&self) -> &Vec2<f64> {
+    pub fn v(&self) -> &Vec2 {
         &self.v
     }
-    pub fn v_mut(&mut self) -> &mut Vec2<f64> {
+    pub fn v_mut(&mut self) -> &mut Vec2 {
         &mut self.v
     }
     /// Acceleration of the object in px/s^2
-    pub fn a(&self) -> &Vec2<f64> {
+    pub fn a(&self) -> &Vec2 {
         &self.a
     }
-    pub fn a_mut(&mut self) -> &mut Vec2<f64> {
+    pub fn a_mut(&mut self) -> &mut Vec2 {
         &mut self.a
     }
 

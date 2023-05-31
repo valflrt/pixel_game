@@ -5,15 +5,16 @@ use std::time;
 use pixel_game_lib::{
     color::Color,
     drawable::{Drawable, UniqueFrame},
-    game::{object::Object, GameBuilder},
+    game::GameBuilder,
+    object::Object,
     physics::Physics,
     shape::Shape,
     vec2::Vec2,
 };
 use winit::event::VirtualKeyCode;
 
-const WIDTH: i32 = 196;
-const HEIGHT: i32 = 128;
+const WIDTH: f64 = 196.;
+const HEIGHT: f64 = 128.;
 
 const BG_COLOR: Color = Color {
     r: 30,
@@ -24,13 +25,13 @@ const BG_COLOR: Color = Color {
 
 fn main() {
     let game = GameBuilder::new()
-        .dims((WIDTH, HEIGHT))
+        .dims(Vec2(WIDTH, HEIGHT))
         .background_color(BG_COLOR)
         .build();
 
-    let mut object = Object::new((WIDTH / 2, 10), Shape::Rect(Vec2(2, 2)));
+    let mut object = Object::new(Vec2(WIDTH / 2., 10.), Shape::Rect(Vec2(2., 2.)));
 
-    let mut physics = Physics::new(*object.pos(), (0., 0.), 60., 9.81);
+    let mut physics = Physics::new((*object.pos()).into(), Vec2(0., 0.), 60., 9.81);
 
     let mut animation: Drawable = UniqueFrame::from_color(Color::WHITE, (1, 1)).into();
     let image = animation.next().unwrap();
@@ -47,31 +48,31 @@ fn main() {
     game.run(move |game| {
         if game.input().key_held(VirtualKeyCode::Left) {
             if !forces_applied.0 {
-                physics.apply_force((-2000., 0.));
+                physics.apply_force(Vec2(-2000., 0.));
                 forces_applied.0 = true;
             }
         } else if forces_applied.0 {
-            physics.apply_force((2000., 0.));
+            physics.apply_force(Vec2(2000., 0.));
             forces_applied.0 = false;
         }
 
         if game.input().key_held(VirtualKeyCode::Right) {
             if !forces_applied.1 {
-                physics.apply_force((2000., 0.));
+                physics.apply_force(Vec2(2000., 0.));
                 forces_applied.1 = true;
             }
         } else if forces_applied.1 {
-            physics.apply_force((-2000., 0.));
+            physics.apply_force(Vec2(-2000., 0.));
             forces_applied.1 = false;
         }
 
         if game.input().key_held(VirtualKeyCode::Up) {
             if !forces_applied.2 {
-                physics.apply_force((0., -w - 6000.));
+                physics.apply_force(Vec2(0., -w - 6000.));
                 forces_applied.2 = true;
             }
         } else if forces_applied.2 {
-            physics.apply_force((0., w + 6000.));
+            physics.apply_force(Vec2(0., w + 6000.));
             forces_applied.2 = false;
         }
 

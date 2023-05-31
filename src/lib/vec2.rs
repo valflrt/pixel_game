@@ -1,12 +1,45 @@
 use std::ops::{Add, AddAssign, Div, Mul, Sub};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Vec2<T>(pub T, pub T);
+fn f64_to_usize(value: f64) -> usize {
+    let value = value.floor();
+    if value.is_sign_positive() && value == (value as usize) as f64 {
+        value as usize
+    } else {
+        panic!("Failed to convert f64 to usize.")
+    }
+}
+fn usize_to_f64(value: usize) -> f64 {
+    if value == (value as f64) as usize {
+        value as f64
+    } else {
+        panic!("Failed to convert usize to f64.")
+    }
+}
 
-impl<T> Add for Vec2<T>
-where
-    T: Add<Output = T>,
-{
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Vec2(pub f64, pub f64);
+
+impl Vec2 {
+    pub const ZERO: Vec2 = Vec2(0., 0.);
+
+    pub fn from_usize(x: usize, y: usize) -> Vec2 {
+        Vec2(usize_to_f64(x), usize_to_f64(y))
+    }
+
+    pub fn filled_with(value: f64) -> Vec2 {
+        Vec2(value.clone(), value)
+    }
+
+    pub fn abs(&self) -> Vec2 {
+        Vec2(self.0.abs(), self.1.abs())
+    }
+
+    pub fn to_usize(&self) -> (usize, usize) {
+        (f64_to_usize(self.0), f64_to_usize(self.1))
+    }
+}
+
+impl Add for Vec2 {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -14,19 +47,13 @@ where
     }
 }
 
-impl<T> AddAssign for Vec2<T>
-where
-    Vec2<T>: Add<Output = Vec2<T>> + Copy,
-{
+impl AddAssign for Vec2 {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs
     }
 }
 
-impl<T> Sub for Vec2<T>
-where
-    T: Sub<Output = T>,
-{
+impl Sub for Vec2 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -34,10 +61,7 @@ where
     }
 }
 
-impl<T> Mul for Vec2<T>
-where
-    T: Mul<Output = T>,
-{
+impl Mul for Vec2 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -45,95 +69,18 @@ where
     }
 }
 
-impl<T> Mul<T> for Vec2<T>
-where
-    T: Mul<Output = T> + Copy,
-{
+impl Mul<f64> for Vec2 {
     type Output = Self;
 
-    fn mul(self, rhs: T) -> Self::Output {
+    fn mul(self, rhs: f64) -> Self::Output {
         Vec2(self.0 * rhs, self.1 * rhs)
     }
 }
 
-impl<T> Div<T> for Vec2<T>
-where
-    T: Div<Output = T> + Copy,
-{
+impl Div<f64> for Vec2 {
     type Output = Self;
 
-    fn div(self, rhs: T) -> Self::Output {
+    fn div(self, rhs: f64) -> Self::Output {
         Vec2(self.0 / rhs, self.1 / rhs)
-    }
-}
-
-impl<T: Default> Default for Vec2<T> {
-    fn default() -> Self {
-        Vec2(T::default(), T::default())
-    }
-}
-
-impl<T> Into<Vec2<T>> for (T, T) {
-    fn into(self) -> Vec2<T> {
-        Vec2(self.0, self.1)
-    }
-}
-impl<T> Into<(T, T)> for Vec2<T> {
-    fn into(self) -> (T, T) {
-        (self.0, self.1)
-    }
-}
-
-impl Into<Vec2<i32>> for Vec2<f64> {
-    fn into(self) -> Vec2<i32> {
-        Vec2(self.0.floor() as i32, self.1.floor() as i32)
-    }
-}
-impl Into<Vec2<i32>> for (f64, f64) {
-    fn into(self) -> Vec2<i32> {
-        Vec2(self.0.floor() as i32, self.1.floor() as i32)
-    }
-}
-impl Into<Vec2<f64>> for Vec2<i32> {
-    fn into(self) -> Vec2<f64> {
-        Vec2(self.0 as f64, self.1 as f64)
-    }
-}
-impl Into<Vec2<f64>> for (i32, i32) {
-    fn into(self) -> Vec2<f64> {
-        Vec2(self.0 as f64, self.1 as f64)
-    }
-}
-
-impl Into<Vec2<usize>> for Vec2<i32> {
-    fn into(self) -> Vec2<usize> {
-        Vec2(
-            self.0.try_into().expect("Failed to convert i32 to usize."),
-            self.1.try_into().expect("Failed to convert i32 to usize."),
-        )
-    }
-}
-impl Into<Vec2<usize>> for (i32, i32) {
-    fn into(self) -> Vec2<usize> {
-        Vec2(
-            self.0.try_into().expect("Failed to convert i32 to usize."),
-            self.1.try_into().expect("Failed to convert i32 to usize."),
-        )
-    }
-}
-impl Into<Vec2<i32>> for Vec2<usize> {
-    fn into(self) -> Vec2<i32> {
-        Vec2(
-            self.0.try_into().expect("Failed to convert usize to i32."),
-            self.1.try_into().expect("Failed to convert usize to i32."),
-        )
-    }
-}
-impl Into<Vec2<i32>> for (usize, usize) {
-    fn into(self) -> Vec2<i32> {
-        Vec2(
-            self.0.try_into().expect("Failed to convert usize to i32."),
-            self.1.try_into().expect("Failed to convert usize to i32."),
-        )
     }
 }
