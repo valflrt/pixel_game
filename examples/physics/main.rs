@@ -31,7 +31,7 @@ fn main() {
 
     let mut object = Object::new(Vec2(WIDTH / 2., 10.), Shape::Rect(Vec2(2., 2.)));
 
-    let mut physics = Physics::new((*object.pos()).into(), Vec2(0., 0.), 60., 9.81);
+    let mut physics = Physics::new(*object.pos(), Vec2(0., 0.), 60., 9.81);
 
     let mut animation: Drawable = UniqueFrame::from_color(Color::WHITE, (1, 1)).into();
     let image = animation.next().unwrap();
@@ -80,7 +80,7 @@ fn main() {
         physics.update(t);
 
         let pos = *physics.pos();
-        *object.pos_mut() = pos.into();
+        *object.pos_mut() = pos;
 
         println!("t = {}s", total_time.elapsed().as_secs_f32());
         println!("v = {:?}", physics.v());

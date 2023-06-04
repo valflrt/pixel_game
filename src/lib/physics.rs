@@ -14,12 +14,12 @@ pub struct Physics {
 impl Physics {
     pub fn new(pos: Vec2, v: Vec2, m: f64, g: f64) -> Self {
         Self {
-            pos: pos.into(),
-            v: v.into(),
+            pos,
+            v,
             a: Vec2::ZERO,
             tf: Vec2::ZERO,
             m,
-            g: g * 10.,
+            g,
         }
     }
 
@@ -33,7 +33,7 @@ impl Physics {
 
     /// Apply a new force on the object, updates the total force.
     pub fn apply_force(&mut self, force: Vec2) {
-        self.tf += force.into();
+        self.tf += force;
     }
     /// Set the total force to the weight of the object.
     pub fn set_tf_to_w(&mut self) {

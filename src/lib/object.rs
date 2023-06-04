@@ -3,6 +3,8 @@ use crate::{
     vec2::Vec2,
 };
 
+mod hitbox;
+
 #[derive(Debug, Clone)]
 pub struct Object {
     pos: Vec2,
@@ -25,10 +27,9 @@ impl Object {
     }
 
     pub fn in_contact_with_any(&self, others: &[&Self]) -> bool {
+        let b1 = self.raw_boundaries();
         others.iter().any(|other| {
-            let b1 = self.raw_boundaries();
             let b2 = other.raw_boundaries();
-
             b1.right >= b2.left && b1.left <= b2.right && b1.bottom >= b2.top && b1.top <= b2.bottom
         })
     }

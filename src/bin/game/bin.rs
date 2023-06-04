@@ -10,19 +10,20 @@ use pixel_game_lib::{
     physics::Physics,
     resources::{import_sprite, import_spritesheet},
     shape::Shape,
-    uv_map::LookupTexture,
+    uv_map::UvMap,
     vec2::Vec2,
 };
 use winit::event::VirtualKeyCode;
 
 const DIMS: Vec2 = Vec2(128., 48.);
-
 const BG_COLOR: Color = Color {
     r: 240,
     g: 240,
     b: 255,
     a: 255,
 };
+
+const WALKING_SPEED: f64 = 20.;
 
 enum CharacterState {
     Walking,
@@ -34,7 +35,6 @@ struct Animation {
     timer: Instant,
     current_frame: usize,
     frames: Vec<Mat<Color>>,
-    frame_cache: (usize, Mat<Color>),
 }
 
 fn main() {
@@ -51,47 +51,31 @@ fn main() {
     let original_char_pos = Vec2(16., 0.);
     let mut character = Object::new(original_char_pos, Shape::Rect(Vec2(8., 18.)));
 
-    let lookup = LookupTexture::new(import_sprite("textures/lookup.png", (24, 24)));
+    let map = UvMap::new(import_sprite("textures/uv_map.png", (24, 24)));
 
     let ground_img = Mat::filled_with(Color::new(40, 40, 50, 255), platform1.raw_dims().to_usize());
 
-    let standing_image = import_sprite("sprites/standing.png", (24, 24));
+    let standing_img = import_sprite("sprites/standing.png", (24, 24));
 
-    let walking_frames =
-        import_spritesheet("spritesheets/walking.png", (24, 24), (5 * 24, 2 * 24), 10);
+    let walking_frames = import_spritesheet("spritesheets/walking.png", (24, 24), (5, 2), 10);
     let mut walking_anim = Animation {
         timer: Instant::now(),
         current_frame: 0,
-        frame_cache: (0, walking_frames[0].to_owned()),
         frames: walking_frames,
     };
 
-    let mut flip = (false, false);
+    let mut flip = false;
 
     let mut timer = time::Instant::now();
-    let mut anim_timer = time::Instant::now();
 
     let mut char_state = CharacterState::Standing;
 
-    let mut physics = Physics::new((*character.pos()).into(), Vec2(0., 0.), 60., 10.);
+    let mut physics = Physics::new(*character.pos(), Vec2(0., 0.), 60., 90.);
     physics.set_tf_to_w();
 
     let mut n: u8 = 0;
     game.run(move |game| {
         let input = game.input();
-
-        if input.key_held(VirtualKeyCode::Left) {
-            flip.0 = true;
-            char_state = CharacterState::Walking;
-            physics.v_mut().0 = -20.;
-        } else if input.key_held(VirtualKeyCode::Right) {
-            flip.0 = false;
-            char_state = CharacterState::Walking;
-            physics.v_mut().0 = 20.;
-        } else {
-            char_state = CharacterState::Standing;
-            physics.v_mut().0 = 0.;
-        }
 
         if character.pos().1 >= DIMS.1 {
             *character.pos_mut() = original_char_pos;
@@ -112,10 +96,28 @@ fn main() {
             physics.set_tf_to_w();
         }
 
-        physics.update(timer.elapsed().as_secs_f64());
+        let lateral_moving_speed = if grounded {
+            WALKING_SPEED
+        } else {
+            WALKING_SPEED * 0.8
+        };
+        if input.key_held(VirtualKeyCode::Left) {
+            flip = true;
+            char_state = CharacterState::Walking;
+            physics.v_mut().0 = -lateral_moving_speed;
+        } else if input.key_held(VirtualKeyCode::Right) {
+            flip = false;
+            char_state = CharacterState::Walking;
+            physics.v_mut().0 = lateral_moving_speed;
+        } else {
+            char_state = CharacterState::Standing;
+            physics.v_mut().0 = 0.;
+        }
 
-        let pos = *physics.pos();
-        *character.pos_mut() = pos.into();
+        let elapsed = timer.elapsed().as_secs_f64();
+        physics.update(elapsed);
+
+        *character.pos_mut() = *physics.pos();
 
         n = (n + 1) % 10;
         if n == 0 {
@@ -124,38 +126,31 @@ fn main() {
             println!("tf = {:?}", physics.tf());
         }
 
-        if anim_timer.elapsed().as_millis() >= 80 {
-            // current_frame = character_anim.next().unwrap();
-            anim_timer = time::Instant::now();
-        }
-
         game.clear(BG_COLOR);
 
         let ground_img_slice = ground_img.as_slice();
         game.image_at(*platform1.pos(), &ground_img_slice);
         game.image_at(*platform2.pos(), &ground_img_slice);
-
-        match char_state {
-            CharacterState::Standing => {
-                game.image_at(*character.pos(), &standing_image.as_slice());
-            }
-            CharacterState::Walking if walking_anim.timer.elapsed().as_millis() >= 167 => {
-                if walking_anim.frame_cache.0 != walking_anim.current_frame {
-                    walking_anim.frame_cache = (
-                        walking_anim.current_frame,
-                        lookup.render(walking_anim.frames[walking_anim.current_frame].to_owned()),
-                    );
+        game.image_at(
+            *character.pos(),
+            &match char_state {
+                CharacterState::Standing => map.render(&standing_img.as_slice()),
+                CharacterState::Walking => {
+                    if walking_anim.timer.elapsed().as_secs_f64() >= 1. / WALKING_SPEED {
+                        walking_anim.current_frame =
+                            (walking_anim.current_frame + 1) % walking_anim.frames.len();
+                        walking_anim.timer = Instant::now();
+                    };
+                    map.render(&walking_anim.frames[walking_anim.current_frame].slice(
+                        (0, 0),
+                        (24, 24),
+                        (flip, false),
+                    ))
                 }
-
-                walking_anim.current_frame =
-                    (walking_anim.current_frame + 1) % walking_anim.frames.len();
-                game.image_at(*character.pos(), &walking_anim.frame_cache.1.as_slice());
+                CharacterState::Jumping => map.render(&standing_img.as_slice()),
             }
-            CharacterState::Jumping => {
-                game.image_at(*character.pos(), &standing_image.as_slice());
-            }
-            _ => {}
-        }
+            .as_slice(),
+        );
 
         timer = time::Instant::now();
     });

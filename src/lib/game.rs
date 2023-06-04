@@ -71,16 +71,16 @@ impl Game {
         });
     }
 
-    pub fn image_at(&mut self, pos: Vec2, image: &MatSlice<Color>) -> Vec<Vec2> {
-        let image_dims = image.dims();
+    pub fn image_at<'a>(&mut self, pos: Vec2, image: &impl MatSlice<'a, Color>) -> Vec<Vec2> {
+        let image_dims = image.slice_dims();
 
         let mut changed_pixels = Vec::new();
         for x in 0..image_dims.0 {
             for y in 0..image_dims.1 {
                 let index: Vec2 = pos + Vec2::from_usize(x, y);
                 let max_render_pos = Vec2(
-                    self.render_pos.0 + self.render_dims.0 - 1.,
-                    self.render_pos.1 + self.render_dims.1 - 1.,
+                    self.render_pos.0 + self.render_dims.0,
+                    self.render_pos.1 + self.render_dims.1,
                 );
 
                 if 0. <= index.0
@@ -161,15 +161,15 @@ impl GameBuilder {
     }
 
     pub fn dims(mut self, dims: Vec2) -> Self {
-        self.dims = Some(dims.into());
+        self.dims = Some(dims);
         self
     }
     pub fn render_pos(mut self, render_pos: Vec2) -> Self {
-        self.render_pos = Some(render_pos.into());
+        self.render_pos = Some(render_pos);
         self
     }
     pub fn render_dims(mut self, render_dims: Vec2) -> Self {
-        self.render_dims = Some(render_dims.into());
+        self.render_dims = Some(render_dims);
         self
     }
     pub fn background_color(mut self, background_color: Color) -> Self {

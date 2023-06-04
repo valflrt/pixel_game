@@ -87,16 +87,16 @@ impl UniqueFrame {
                         a: v[3],
                     })
                     .collect::<Vec<_>>(),
-                dims.into(),
+                dims,
             ),
         }
     }
 
     pub fn from_color(color: Color, dims: (usize, usize)) -> Self {
-        let dims = dims.into();
+        let dims = dims;
         UniqueFrame {
             dims,
-            state: Mat::filled_with(color, dims.into()),
+            state: Mat::filled_with(color, dims),
         }
     }
 }

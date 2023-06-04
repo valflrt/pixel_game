@@ -1,9 +1,16 @@
 use std::{path::PathBuf, str::FromStr};
 
-use crate::{color::Color, mat::Mat};
+use crate::{
+    color::Color,
+    mat::{Mat, MatSlice},
+};
 
 const ASSETS_PATH: &str = "assets";
 
+/// Import sprites from spritesheet, `sprite_dims` represents
+/// the dimensions of a sprite (that must have the same dims)
+/// and `spritesheet_dims` represents the number of rows and
+/// columns that the spritesheet holds.
 pub fn import_spritesheet(
     path: &str,
     sprite_dims: (usize, usize),
@@ -27,14 +34,22 @@ pub fn import_spritesheet(
         sprite_dims.0 * spritesheet_dims.0,
         sprite_dims.1 * spritesheet_dims.1,
     );
-    let image = Mat::from_vec(image_pixels, spritesheet_dims);
+    let spritesheet_image = Mat::from_vec(image_pixels, image_dims);
 
     let mut images = Vec::new();
 
-    for v in 0..image_dims.1 {
-        for u in 0..image_dims.0 {
-            if v * image_dims.1 + u < n_sprites {
-                images.push(image.slice((u, v), sprite_dims, (false, false)).to_mat());
+    for x in 0..spritesheet_dims.0 {
+        for y in 0..spritesheet_dims.1 {
+            if y * spritesheet_dims.0 + x < n_sprites {
+                images.push(
+                    spritesheet_image
+                        .slice(
+                            (x * sprite_dims.0, y * sprite_dims.1),
+                            sprite_dims,
+                            (false, false),
+                        )
+                        .to_mat(),
+                );
             }
         }
     }

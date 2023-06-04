@@ -7,7 +7,7 @@ pub enum Shape {
 
 impl Shape {
     pub fn new_rect(dims: Vec2) -> Self {
-        Shape::Rect(dims.into())
+        Shape::Rect(dims)
     }
 }
 
