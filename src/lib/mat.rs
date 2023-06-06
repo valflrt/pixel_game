@@ -3,6 +3,12 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+mod enumerate;
+mod mat_slice;
+mod sliced_mat;
+
+pub use {mat_slice::MatSlice, sliced_mat::SlicedMat};
+
 fn dims_product(dims: (usize, usize)) -> usize {
     dims.0
         .checked_mul(dims.1)
@@ -14,27 +20,6 @@ fn dims_product(dims: (usize, usize)) -> usize {
 fn get_vec_index(index: (usize, usize), width: usize) -> usize {
     index.1 * width + index.0
 }
-
-// pub struct EnumerateMat {
-//     current: (usize, usize),
-//     dims: (usize, usize),
-// }
-
-// impl Iterator for EnumerateMat {
-//     type Item = (usize, usize);
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.current.0 < self.dims.0 && self.current.1 < self.dims.1 {
-//             if self.current.0 < self.dims.0 {
-//                 self.current.0 += 1;
-//             } else if self.current.1 < self.dims.1 {
-//                 self.current.1 += 1;
-//             }
-//             Some(self.current)
-//         } else {
-//             None
-//         }
-//     }
-// }
 
 /// Mat (like Vec but in 2 dimensions).
 #[derive(Debug, Clone)]
@@ -124,25 +109,25 @@ impl<T> Mat<T> {
     /// Flip the rows of the Mat.
     pub fn flip_r(&mut self)
     where
-        T: Clone + Debug,
+        T: Clone,
     {
-        self.vec = self.slice((0, 0), self.dims, (true, false)).to_vec();
+        self.vec = self.slice_flip((true, false)).to_vec();
     }
 
     /// Flip the columns of the Mat.
     pub fn flip_c(&mut self)
     where
-        T: Clone + Debug,
+        T: Clone,
     {
-        self.vec = self.slice((0, 0), self.dims, (false, true)).to_vec();
+        self.vec = self.slice_flip((false, true)).to_vec();
     }
 
     /// Flip the rows and the columns of the Mat.
     pub fn flip_both(&mut self)
     where
-        T: Clone + Debug,
+        T: Clone,
     {
-        self.vec = self.slice((0, 0), self.dims, (true, true)).to_vec();
+        self.vec = self.slice_flip((true, true)).to_vec();
     }
 
     /// Inverts the dimensions of the Mat.
@@ -150,108 +135,38 @@ impl<T> Mat<T> {
         self.dims = (self.dims.1, self.dims.0);
     }
 
-    /// Create a MatSlice starting at `index` with width and height
-    /// `dims`. Flip the selected area row-wise with `flip.0`
-    /// and/or column-wise with `flip.1`.
-    pub fn slice<'a>(
-        &'a self,
-        slice_index: (usize, usize),
-        slice_dims: (usize, usize),
-        flip_slice: (bool, bool),
-    ) -> SlicedMat<'a, T>
-    where
-        T: Clone,
-    {
-        assert!(slice_index.0 < self.dims.0);
-        assert!(slice_index.1 < self.dims.1);
-        assert!(slice_index.0 + slice_dims.0 - 1 < self.dims.0);
-        assert!(slice_index.1 + slice_dims.1 - 1 < self.dims.1);
-
-        SlicedMat {
-            mat: &self,
-            slice_index,
-            slice_dims,
-            flip_slice,
-        }
-    }
-
+    /// Checks if an index is present in the Mat.
     pub fn has(&self, index: (usize, usize)) -> bool {
         index.0 < self.dims.0 && index.1 < self.dims.1
     }
 
-    /// Create an Iterator that goes through all the values in
-    /// the Mat.
-    pub fn iter(&self) -> std::slice::Iter<T> {
-        self.vec.iter()
-    }
-
-    /// Create a mutable Iterator that goes through all the values
-    /// in the Mat.
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<T> {
-        self.vec.iter_mut()
-    }
-
-    /// Enumerate Mat indexes row-wise.
-    pub fn enumerate_r(&self) -> Vec<(usize, usize)> {
-        let mut indexes = Vec::new();
-        for y in 0..self.dims.1 {
-            for x in 0..self.dims.0 {
-                indexes.push((x, y));
-            }
-        }
-        indexes
-    }
-
-    /// Enumerate Mat indexes column-wise.
-    pub fn enumerate_c(&self) -> Vec<(usize, usize)> {
-        let mut indexes = Vec::new();
-        for x in 0..self.dims.0 {
-            for y in 0..self.dims.1 {
-                indexes.push((x, y));
-            }
-        }
-        indexes
-    }
-
-    /// Return the Vec representation of the Mat.
-    pub fn to_vec(&self) -> Vec<T>
-    where
-        T: Clone,
-    {
-        self.vec.to_owned()
-    }
-
-    /// Return the 2d Vec representation of the Mat.
-    pub fn to_2d_vec(&self) -> Vec<&[T]> {
-        self.vec.chunks(self.dims.1.try_into().unwrap()).collect()
-    }
-
-    pub fn as_slice(&self) -> SlicedMat<T>
-    where
-        T: Clone,
-    {
-        self.slice((0, 0), self.dims, (false, false))
-    }
-
-    /// Return a reference to the Vec representation of the Mat.
-    pub fn vec(&self) -> &Vec<T> {
-        &self.vec
-    }
-
-    /// The dimensions of the Mat (x and y).
+    /// The dimensions of the Mat.
     pub fn dims(&self) -> &(usize, usize) {
         &self.dims
-    }
-
-    /// Get the number of items in the Mat.
-    pub fn len(&self) -> usize {
-        dims_product(self.dims)
     }
 
     /// Get the position of the given Mat index in the Vec
     /// representation of the Mat.
     pub fn get_vec_index(&self, index: (usize, usize)) -> usize {
         get_vec_index(index, self.dims.0)
+    }
+}
+
+impl<T> MatSlice<T> for Mat<T> {
+    fn slice_index(&self) -> &(usize, usize) {
+        &(0, 0)
+    }
+    fn slice_dims(&self) -> &(usize, usize) {
+        &self.dims
+    }
+    fn flip(&self) -> &(bool, bool) {
+        &(false, false)
+    }
+    fn len(&self) -> usize {
+        dims_product(self.dims)
+    }
+    fn mat(&self) -> &Mat<T> {
+        self
     }
 }
 
@@ -286,99 +201,6 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.to_2d_vec())
-    }
-}
-
-pub trait MatSlice<'a, T>: Index<(usize, usize), Output = T> {
-    fn to_vec(&self) -> Vec<T>
-    where
-        T: Clone + Debug,
-    {
-        let mut new_vec = self.mat().vec().clone();
-        new_vec.truncate(self.len());
-
-        let dims = self.slice_dims();
-        for x in 0..dims.0 {
-            for y in 0..dims.1 {
-                new_vec[get_vec_index((x, y), dims.0)] = self[(x, y)].to_owned();
-            }
-        }
-        new_vec
-    }
-
-    fn to_mat(&self) -> Mat<T>
-    where
-        T: Clone + Debug,
-    {
-        Mat::from_vec(self.to_vec(), *self.slice_dims())
-    }
-
-    /// Create a MatSlice starting at `index` with width and height
-    /// `dims`. Flip the selected area row-wise with `flip.0`
-    /// and/or column-wise with `flip.1`.
-    fn slice(
-        &'a self,
-        slice_index: (usize, usize),
-        slice_dims: (usize, usize),
-        flip_slice: (bool, bool),
-    ) -> SlicedMat<'a, T>
-    where
-        T: Clone,
-    {
-        self.mat().slice(slice_index, slice_dims, flip_slice)
-    }
-
-    fn slice_index(&self) -> &(usize, usize);
-    fn slice_dims(&self) -> &(usize, usize);
-    fn flip(&self) -> &(bool, bool);
-    fn len(&self) -> usize;
-
-    fn mat(&self) -> &Mat<T>;
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct SlicedMat<'a, T> {
-    mat: &'a Mat<T>,
-    slice_index: (usize, usize),
-    slice_dims: (usize, usize),
-    flip_slice: (bool, bool),
-}
-
-impl<'a, T> MatSlice<'a, T> for SlicedMat<'a, T> {
-    fn slice_index(&self) -> &(usize, usize) {
-        &self.slice_index
-    }
-    fn slice_dims(&self) -> &(usize, usize) {
-        &self.slice_dims
-    }
-    fn flip(&self) -> &(bool, bool) {
-        &self.flip_slice
-    }
-    fn len(&self) -> usize {
-        dims_product(self.slice_dims)
-    }
-
-    fn mat(&self) -> &Mat<T> {
-        self.mat
-    }
-}
-
-impl<'a, T> Index<(usize, usize)> for SlicedMat<'a, T> {
-    type Output = T;
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
-        let index = (
-            if self.flip_slice.0 {
-                self.slice_index.0 + self.slice_dims.0 - 1 - index.0
-            } else {
-                self.slice_index.0 + index.0
-            },
-            if self.flip_slice.1 {
-                self.slice_index.1 + self.slice_dims.1 - 1 - index.1
-            } else {
-                self.slice_index.1 + index.1
-            },
-        );
-        &self.mat[index]
     }
 }
 

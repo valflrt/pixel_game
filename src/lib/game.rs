@@ -1,4 +1,4 @@
-pub mod grid;
+mod grid;
 
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
@@ -9,9 +9,6 @@ use winit::{
 use winit_input_helper::WinitInputHelper;
 
 use crate::{color::Color, game::grid::Grid, mat::MatSlice, vec2::Vec2};
-
-// TODO Split Game into two parts: update things and draw
-// things.
 
 pub struct Game {
     dims: Vec2,
@@ -71,17 +68,14 @@ impl Game {
         });
     }
 
-    pub fn image_at<'a>(&mut self, pos: Vec2, image: &impl MatSlice<'a, Color>) -> Vec<Vec2> {
+    pub fn image_at(&mut self, pos: Vec2, image: &impl MatSlice<Color>) -> Vec<Vec2> {
         let image_dims = image.slice_dims();
 
         let mut changed_pixels = Vec::new();
         for x in 0..image_dims.0 {
             for y in 0..image_dims.1 {
                 let index: Vec2 = pos + Vec2::from_usize(x, y);
-                let max_render_pos = Vec2(
-                    self.render_pos.0 + self.render_dims.0,
-                    self.render_pos.1 + self.render_dims.1,
-                );
+                let max_render_pos = self.render_pos + self.render_dims;
 
                 if 0. <= index.0
                     && 0. <= index.1
@@ -132,7 +126,7 @@ impl Game {
                 self.render_dims.to_usize(),
                 (false, false),
             )
-            .to_mat()
+            .to_vec()
             .iter()
             .zip(pixels.chunks_exact_mut(4))
         {

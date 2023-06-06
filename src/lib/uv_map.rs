@@ -14,7 +14,7 @@ impl UvMap {
         UvMap { texture }
     }
 
-    pub fn render<'a>(&self, image: &impl MatSlice<'a, Color>) -> Mat<Color> {
+    pub fn render<'a>(&self, image: &impl MatSlice<Color>) -> Mat<Color> {
         let dims = *image.slice_dims();
         let mut output = Mat::filled_with(Color::TRANSPARENT, dims);
         for x in 0..dims.0 {
@@ -34,7 +34,7 @@ pub struct UvRendered<'a> {
     slice: SlicedMat<'a, Color>,
 }
 
-impl<'a> MatSlice<'a, Color> for UvRendered<'a> {
+impl<'a> MatSlice<Color> for UvRendered<'a> {
     fn slice_index(&self) -> &(usize, usize) {
         &self.slice.slice_index()
     }

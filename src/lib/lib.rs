@@ -5,6 +5,5 @@ pub mod mat;
 pub mod object;
 pub mod physics;
 pub mod resources;
-pub mod shape;
 pub mod uv_map;
 pub mod vec2;

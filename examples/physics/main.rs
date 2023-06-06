@@ -6,9 +6,9 @@ use pixel_game_lib::{
     color::Color,
     drawable::{Drawable, UniqueFrame},
     game::GameBuilder,
+    mat::MatSlice,
     object::Object,
     physics::Physics,
-    shape::Shape,
     vec2::Vec2,
 };
 use winit::event::VirtualKeyCode;
@@ -29,7 +29,7 @@ fn main() {
         .background_color(BG_COLOR)
         .build();
 
-    let mut object = Object::new(Vec2(WIDTH / 2., 10.), Shape::Rect(Vec2(2., 2.)));
+    let mut object = Object::new(Vec2(WIDTH / 2., 10.), Vec2(2., 2.), None);
 
     let mut physics = Physics::new(*object.pos(), Vec2(0., 0.), 60., 9.81);
 

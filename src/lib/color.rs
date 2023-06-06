@@ -7,48 +7,18 @@ pub struct Color {
 }
 
 impl Color {
-    pub const RED: Color = Color {
-        r: 255,
-        g: 0,
-        b: 0,
-        a: 255,
-    };
-    pub const GREEN: Color = Color {
-        r: 0,
-        g: 255,
-        b: 0,
-        a: 255,
-    };
-    pub const BLUE: Color = Color {
-        r: 0,
-        g: 0,
-        b: 255,
-        a: 255,
-    };
-    pub const BLACK: Color = Color {
-        r: 0,
-        g: 0,
-        b: 0,
-        a: 255,
-    };
-    pub const WHITE: Color = Color {
-        r: 255,
-        g: 255,
-        b: 255,
-        a: 255,
-    };
-    pub const TRANSPARENT: Color = Color {
-        r: 0,
-        g: 0,
-        b: 0,
-        a: 0,
-    };
+    pub const RED: Color = Color::new(255, 0, 0, 255);
+    pub const GREEN: Color = Color::new(0, 255, 0, 255);
+    pub const BLUE: Color = Color::new(0, 0, 255, 255);
+    pub const BLACK: Color = Color::new(0, 0, 0, 255);
+    pub const WHITE: Color = Color::new(255, 255, 255, 255);
+    pub const TRANSPARENT: Color = Color::new(0, 0, 0, 0);
 
-    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+    pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Color { r, g, b, a }
     }
 
-    pub fn from_bytes(bytes: [u8; 4]) -> Self {
+    pub const fn from_bytes(bytes: [u8; 4]) -> Self {
         Color {
             r: bytes[0],
             g: bytes[1],
@@ -57,7 +27,7 @@ impl Color {
         }
     }
 
-    pub fn to_bytes(&self) -> [u8; 4] {
+    pub const fn to_bytes(&self) -> [u8; 4] {
         [self.r, self.g, self.b, self.a]
     }
 }
