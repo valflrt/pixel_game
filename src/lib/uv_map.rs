@@ -36,16 +36,13 @@ pub struct UvRendered<'a> {
 
 impl<'a> MatSlice<Color> for UvRendered<'a> {
     fn slice_index(&self) -> &(usize, usize) {
-        &self.slice.slice_index()
+        self.slice.slice_index()
     }
     fn slice_dims(&self) -> &(usize, usize) {
-        &self.slice.slice_dims()
+        self.slice.slice_dims()
     }
     fn flip(&self) -> &(bool, bool) {
-        &self.slice.flip()
-    }
-    fn len(&self) -> usize {
-        self.slice.len()
+        self.slice.flip()
     }
     fn mat(&self) -> &Mat<Color> {
         self.slice.mat()

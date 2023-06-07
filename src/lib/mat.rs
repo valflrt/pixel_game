@@ -162,9 +162,6 @@ impl<T> MatSlice<T> for Mat<T> {
     fn flip(&self) -> &(bool, bool) {
         &(false, false)
     }
-    fn len(&self) -> usize {
-        dims_product(self.dims)
-    }
     fn mat(&self) -> &Mat<T> {
         self
     }

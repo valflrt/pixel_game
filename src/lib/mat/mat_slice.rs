@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use super::{enumerate::EnumerateMat, get_vec_index, Mat, SlicedMat};
+use super::{dims_product, enumerate::EnumerateMat, get_vec_index, Mat, SlicedMat};
 
 pub trait MatSlice<T>: Index<(usize, usize), Output = T> {
     /// Create a new Vec representation of a Mat from the
@@ -12,11 +12,9 @@ pub trait MatSlice<T>: Index<(usize, usize), Output = T> {
         let mut new_vec = self.mat().vec().clone();
         new_vec.truncate(self.len());
 
-        let dims = self.slice_dims();
-        for x in 0..dims.0 {
-            for y in 0..dims.1 {
-                new_vec[get_vec_index((x, y), dims.0)] = self[(x, y)].to_owned();
-            }
+        // TODO rework that
+        for (x, y) in EnumerateMat::<true>::new(*self.slice_dims()) {
+            new_vec[get_vec_index((x, y), self.slice_dims().0)] = self[(x, y)].to_owned();
         }
         new_vec
     }
@@ -78,19 +76,22 @@ pub trait MatSlice<T>: Index<(usize, usize), Output = T> {
         EnumerateMat::new(*self.slice_dims())
     }
 
+    /// Get a reference to the Vec representation of the Mat
+    /// referenced by this MatSlice.
+    fn vec(&self) -> &Vec<T> {
+        &self.mat().vec
+    }
+    /// Get the number of items in the MatSlice.
+    fn len(&self) -> usize {
+        dims_product(*self.slice_dims())
+    }
+
     /// Get the start index of the MatSlice.
     fn slice_index(&self) -> &(usize, usize);
     /// Get the dimensions of the MatSlice.
     fn slice_dims(&self) -> &(usize, usize);
     /// Get the flip "state" of the MatSlice.
     fn flip(&self) -> &(bool, bool);
-    /// Get the number of items in the MatSlice.
-    fn len(&self) -> usize;
     /// Get a reference to the Mat referenced by this MatSlice.
     fn mat(&self) -> &Mat<T>;
-    /// Get a reference to the Vec representation of the Mat
-    /// referenced by this MatSlice.
-    fn vec(&self) -> &Vec<T> {
-        &self.mat().vec
-    }
 }

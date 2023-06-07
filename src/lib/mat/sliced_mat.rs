@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use super::{dims_product, Mat, MatSlice};
+use super::{Mat, MatSlice};
 
 #[derive(Debug, Clone, Copy)]
 pub struct SlicedMat<'a, T> {
@@ -35,9 +35,6 @@ impl<'a, T> MatSlice<T> for SlicedMat<'a, T> {
     }
     fn flip(&self) -> &(bool, bool) {
         &self.flip_slice
-    }
-    fn len(&self) -> usize {
-        dims_product(self.slice_dims)
     }
     fn mat(&self) -> &Mat<T> {
         self.mat
