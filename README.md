@@ -1,6 +1,6 @@
 # Pixel Game
 
-A simple and **inefficient** helper to build pixel art games.
+A simple and **inefficient** pixel art game.
 
 ## License
 
